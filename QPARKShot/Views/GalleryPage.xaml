@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="QPARKShot.Views.GalleryPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:QPARKShot.Views">
+    <Grid Padding="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Grid Grid.Row="0" Padding="16,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button x:Name="CaptureButton" Click="OnCapture">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE722;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+                        <TextBlock Text="Capture" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="SettingsButton" Click="OnSettings">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+                        <TextBlock Text="Preferences" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="ClearCacheButton" Click="OnClearCache" ToolTipService.ToolTip="Clear cache">
+                    <FontIcon Glyph="&#xE74D;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid>
+                <TextBlock x:Name="EmptyState"
+                           Text="No screenshots found."
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Visibility="Collapsed" />
+
+                <ItemsRepeater x:Name="GalleryRepeater" Margin="16">
+                    <ItemsRepeater.Layout>
+                        <UniformGridLayout MinItemWidth="160" MinItemHeight="120"
+                                           MinRowSpacing="14" MinColumnSpacing="14" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate>
+                            <local:ScreenshotCard />
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Page>
