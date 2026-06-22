@@ -14,11 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
+      # Use the pre-installed Visual Studio + .NET 8 SDK on the runner —
+      # it ships with the AppxPackage / WindowsAppSDK MSBuild targets that
+      # `setup-dotnet`'s slim SDK doesn't include. global.json pins to 8.x.
       - name: Show active SDK
         run: |
           dotnet --info | Select-String -Pattern "Version|RID" -SimpleMatch
