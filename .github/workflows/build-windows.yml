@@ -22,13 +22,14 @@ jobs:
 
       - name: Build + Publish
         run: |
+          $publishDir = Join-Path (Get-Location) "build\Release\"
           msbuild QPARKShot\QPARKShot.csproj `
             -t:Publish `
             -p:Configuration=Release `
             -p:Platform=x64 `
             -p:RuntimeIdentifier=win-x64 `
             -p:SelfContained=false `
-            -p:PublishDir=build\Release\ `
+            -p:PublishDir=$publishDir `
             -p:PublishReadyToRun=false `
             -p:PublishSingleFile=false `
             -p:WindowsPackageType=None
