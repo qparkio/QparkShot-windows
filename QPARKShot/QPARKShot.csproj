@@ -22,6 +22,12 @@
     <Company>QPARK</Company>
     <Copyright>Copyright © 2026 QPARK</Copyright>
     <UseRidGraph>true</UseRidGraph>
+    <!-- Bundle the WindowsAppSDK runtime locally so the app runs on machines
+         without the global Windows App Runtime installed. -->
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <PublishSingleFile>false</PublishSingleFile>
   </PropertyGroup>
 
   <ItemGroup>

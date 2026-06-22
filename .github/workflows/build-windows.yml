@@ -20,7 +20,7 @@ jobs:
       - name: NuGet restore
         run: msbuild QPARKShot.sln -t:Restore -p:Configuration=Release -p:Platform=x64
 
-      - name: Build + Publish
+      - name: Build + Publish (self-contained)
         run: |
           $publishDir = Join-Path (Get-Location) "build\Release\"
           msbuild QPARKShot\QPARKShot.csproj `
@@ -28,22 +28,41 @@ jobs:
             -p:Configuration=Release `
             -p:Platform=x64 `
             -p:RuntimeIdentifier=win-x64 `
-            -p:SelfContained=false `
+            -p:SelfContained=true `
+            -p:WindowsAppSDKSelfContained=true `
             -p:PublishDir=$publishDir `
             -p:PublishReadyToRun=false `
             -p:PublishSingleFile=false `
             -p:WindowsPackageType=None
 
-      - name: List build output (debug)
+      - name: Build size (debug)
         run: |
-          Write-Host "==> build/Release contents:"
+          Write-Host "==> build/Release size:"
           if (Test-Path build/Release) {
-            Get-ChildItem -Recurse build/Release | Select-Object FullName, Length | Format-Table -AutoSize | Out-String -Width 200
-          } else {
-            Write-Host "MISSING"
+            $size = (Get-ChildItem -Recurse build/Release | Measure-Object -Property Length -Sum).Sum / 1MB
+            Write-Host ("Total: {0:N2} MB" -f $size)
+            Get-ChildItem build/Release | Select-Object Name, Length | Sort-Object Length -Descending | Select-Object -First 10 | Format-Table -AutoSize | Out-String -Width 200
           }
 
-      - name: Upload Release build (unpackaged)
+      - name: Install NSIS
+        run: choco install nsis -y --no-progress
+
+      - name: Build NSIS installer
+        run: |
+          New-Item -ItemType Directory -Force -Path build\Installer | Out-Null
+          & 'C:\Program Files (x86)\NSIS\makensis.exe' /V2 scripts\installer.nsi
+          if ($LASTEXITCODE -ne 0) { throw "makensis failed with exit code $LASTEXITCODE" }
+          Write-Host "==> Installer:"
+          Get-ChildItem build\Installer | Format-Table -AutoSize
+
+      - name: Upload Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: QPARKShot-Setup
+          path: build/Installer/QPARKShot-Setup-*.exe
+          if-no-files-found: error
+
+      - name: Upload portable Release build (zipped folder)
         uses: actions/upload-artifact@v4
         with:
           name: QPARKShot-Windows-Release
