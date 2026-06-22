@@ -17,7 +17,7 @@ public static class Logger
     private static readonly object Sync = new();
     private static bool _initialized;
 
-    public static string Path => LogPath;
+    public static string FilePath => LogPath;
 
     public static void Init()
     {
