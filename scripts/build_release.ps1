@@ -12,6 +12,7 @@ Write-Host "==> dotnet publish (Release, win-x64, unpackaged WinUI 3)"
 dotnet publish QPARKShot\QPARKShot.csproj `
     -c Release -r win-x64 --self-contained false `
     -o $OutDir
+if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
 
 Write-Host ""
 Write-Host "==> Done"

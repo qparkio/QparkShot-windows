@@ -19,6 +19,11 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Show active SDK
+        run: |
+          dotnet --info | Select-String -Pattern "Version|RID" -SimpleMatch
+          dotnet --list-sdks
+
       - name: Restore
         run: dotnet restore QPARKShot.sln
 
@@ -27,18 +32,12 @@ jobs:
 
       - name: List build output (debug)
         run: |
-          Write-Host "==> Repo root:"
-          Get-Location
-          Write-Host "==> build/:"
-          if (Test-Path build) { Get-ChildItem -Recurse build | Select-Object FullName, Length | Format-Table -AutoSize | Out-String -Width 200 } else { Write-Host "MISSING" }
-
-      - name: Install WiX v4 (v7 requires OSMF EULA acceptance)
-        continue-on-error: true
-        run: dotnet tool install --global wix --version 4.0.5
-
-      - name: Build MSI
-        continue-on-error: true
-        run: pwsh ./scripts/build_msi.ps1
+          Write-Host "==> build/Release contents:"
+          if (Test-Path build/Release) {
+            Get-ChildItem -Recurse build/Release | Select-Object FullName, Length | Format-Table -AutoSize | Out-String -Width 200
+          } else {
+            Write-Host "MISSING"
+          }
 
       - name: Upload Release build (unpackaged)
         uses: actions/upload-artifact@v4
@@ -46,10 +45,3 @@ jobs:
           name: QPARKShot-Windows-Release
           path: build/Release/**
           if-no-files-found: error
-
-      - name: Upload MSI (if built)
-        if: hashFiles('build/Msi/*.msi') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: QPARKShot-Windows-MSI
-          path: build/Msi/*.msi
