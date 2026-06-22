@@ -1,26 +1,26 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
+using System.Windows.Navigation;
+using Microsoft.Win32;
 using QPARKShot.Models;
 using QPARKShot.Services;
 
 namespace QPARKShot.Views;
 
-public sealed partial class SettingsPage : Page
+public partial class SettingsPage : Page
 {
-    public SettingsPage()
+    public SettingsPage(string initialTab = "appearance")
     {
-        this.InitializeComponent();
-    }
-
-    protected override void OnNavigatedTo(NavigationEventArgs e)
-    {
-        if (e.Parameter is string tabKey)
+        InitializeComponent();
+        Loaded += (_, _) =>
         {
-            int idx = tabKey switch
+            var idx = initialTab switch
             {
                 "appearance" => 0,
                 "hotkeys" => 1,
@@ -28,63 +28,85 @@ public sealed partial class SettingsPage : Page
                 "storage" => 3,
                 "buffer" => 4,
                 "about" => 5,
-                _ => 0
+                _ => 0,
             };
-            TabSelector.SelectedIndex = idx;
-        }
-        BuildTab();
+            TabList.SelectedIndex = idx;
+        };
     }
 
     private void OnBack(object sender, RoutedEventArgs e) => App.MainWindowInstance?.ShowGallery();
+
     private void OnTabChanged(object sender, SelectionChangedEventArgs e) => BuildTab();
 
     private void BuildTab()
     {
         ContentRoot.Children.Clear();
-        switch (TabSelector.SelectedIndex)
+        var tag = (TabList.SelectedItem as ListBoxItem)?.Tag?.ToString() ?? "appearance";
+        switch (tag)
         {
-            case 0: BuildAppearance(); break;
-            case 1: BuildHotkeys(); break;
-            case 2: BuildWatermark(); break;
-            case 3: BuildStorage(); break;
-            case 4: BuildBuffer(); break;
-            default: BuildAbout(); break;
+            case "appearance": BuildAppearance(); break;
+            case "hotkeys": BuildHotkeys(); break;
+            case "watermark": BuildWatermark(); break;
+            case "storage": BuildStorage(); break;
+            case "buffer": BuildBuffer(); break;
+            case "about": BuildAbout(); break;
         }
     }
 
-    // ===== Helpers =====
+    // ===== Building blocks =====
+
+    private static TextBlock Header(string text) => new()
+    {
+        Text = text,
+        FontSize = 18,
+        FontWeight = FontWeights.Bold,
+        Margin = new Thickness(0, 0, 0, 12),
+    };
 
     private static Border Card(UIElement content) => new()
     {
-        Background = (Brush)Application.Current.Resources["LayerFillColorDefaultBrush"],
-        BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
-        BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(8),
-        Padding = new Thickness(14),
+        Style = (Style)Application.Current.Resources["SettingsCardStyle"],
+        Margin = new Thickness(0, 0, 0, 12),
         Child = content,
     };
 
-    private static TextBlock Header(string title) => new()
+    private static StackPanel V(params UIElement[] kids)
     {
-        Text = title,
-        FontSize = 16,
-        FontWeight = Microsoft.UI.Text.FontWeights.Bold,
-        Margin = new Thickness(0, 0, 0, 4),
-    };
-
-    private static StackPanel Section(string title, params UIElement[] cards)
-    {
-        var sp = new StackPanel { Spacing = 10 };
-        sp.Children.Add(Header(title));
-        foreach (var c in cards) sp.Children.Add(c);
+        var sp = new StackPanel();
+        foreach (var k in kids) sp.Children.Add(k);
         return sp;
     }
+
+    private static StackPanel H(params UIElement[] kids)
+    {
+        var sp = new StackPanel { Orientation = Orientation.Horizontal };
+        foreach (var k in kids) sp.Children.Add(k);
+        return sp;
+    }
+
+    private static TextBlock Label(string text, double size = 12, FontWeight? weight = null) => new()
+    {
+        Text = text,
+        FontSize = size,
+        FontWeight = weight ?? FontWeights.Normal,
+        Margin = new Thickness(0, 0, 0, 6),
+        VerticalAlignment = VerticalAlignment.Center,
+    };
+
+    private static TextBlock Hint(string text) => new()
+    {
+        Text = text,
+        FontSize = 11,
+        Foreground = (Brush)Application.Current.Resources["SecondaryText"],
+        TextWrapping = TextWrapping.Wrap,
+        Margin = new Thickness(0, 4, 0, 0),
+    };
 
     // ===== Appearance =====
     private void BuildAppearance()
     {
         var s = SettingsStore.Shared.Settings;
-        var picker = new ComboBox { MinWidth = 160 };
+        var picker = new ComboBox { Width = 180, HorizontalAlignment = HorizontalAlignment.Left };
         picker.Items.Add(new ComboBoxItem { Content = "System", Tag = "system", IsSelected = s.ThemePreference == "system" });
         picker.Items.Add(new ComboBoxItem { Content = "Light",  Tag = "light",  IsSelected = s.ThemePreference == "light" });
         picker.Items.Add(new ComboBoxItem { Content = "Dark",   Tag = "dark",   IsSelected = s.ThemePreference == "dark" });
@@ -93,53 +115,37 @@ public sealed partial class SettingsPage : Page
             var tag = (picker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "system";
             SettingsStore.Shared.Mutate(x => x.ThemePreference = tag);
         };
-        var stack = new StackPanel { Spacing = 8 };
-        stack.Children.Add(new TextBlock { Text = "Theme", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
-        stack.Children.Add(picker);
-        stack.Children.Add(new TextBlock
-        {
-            Text = "Follows the current Windows theme automatically when set to System.",
-            FontSize = 11, Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
-        });
-        ContentRoot.Children.Add(Section("Appearance", Card(stack)));
+
+        ContentRoot.Children.Add(Header("Appearance"));
+        ContentRoot.Children.Add(Card(V(
+            Label("Theme", weight: FontWeights.SemiBold),
+            picker,
+            Hint("System follows the current Windows theme.")
+        )));
     }
 
     // ===== Hotkeys =====
     private void BuildHotkeys()
     {
-        ContentRoot.Children.Add(Section("Hotkeys",
-            HotkeyCard("Selection Capture Hotkey", SettingsStore.Shared.Settings.Hotkey, "Ctrl + Shift + C by default"),
-            HotkeyCard("Full-Screen Capture Hotkey", SettingsStore.Shared.Settings.FullScreenHotkey, "Off by default"),
-            CaptureModeCard()));
+        ContentRoot.Children.Add(Header("Hotkeys"));
+        ContentRoot.Children.Add(HotkeyCard("Selection Capture", SettingsStore.Shared.Settings.Hotkey, "Default: Ctrl + Shift + C"));
+        ContentRoot.Children.Add(HotkeyCard("Full-Screen Capture", SettingsStore.Shared.Settings.FullScreenHotkey, "Off by default"));
+        ContentRoot.Children.Add(CaptureModeCard());
     }
 
     private Border HotkeyCard(string title, HotkeyConfig cfg, string subtitle)
     {
-        var stack = new StackPanel { Spacing = 8 };
-        var titleStack = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        var toggle = new ToggleSwitch
-        {
-            IsOn = cfg.Enabled,
-            OnContent = "On", OffContent = "Off",
-        };
-        titleStack.Children.Add(new TextBlock { Text = title, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
-        titleStack.Children.Add(toggle);
-        stack.Children.Add(titleStack);
-        stack.Children.Add(new TextBlock { Text = subtitle, FontSize = 11, Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
-
-        var detail = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new Thickness(0, 6, 0, 0) };
-        var ctrl  = new CheckBox { Content = "Ctrl",  IsChecked = cfg.Modifiers.Contains("control") };
-        var shift = new CheckBox { Content = "Shift", IsChecked = cfg.Modifiers.Contains("shift") };
-        var alt   = new CheckBox { Content = "Alt",   IsChecked = cfg.Modifiers.Contains("option") || cfg.Modifiers.Contains("alt") };
-        var win   = new CheckBox { Content = "Win",   IsChecked = cfg.Modifiers.Contains("command") || cfg.Modifiers.Contains("win") };
-        var key   = new TextBox { Text = cfg.Key, MaxLength = 1, Width = 40 };
-        detail.Children.Add(ctrl); detail.Children.Add(shift); detail.Children.Add(alt); detail.Children.Add(win); detail.Children.Add(new TextBlock { Text = "Key:", VerticalAlignment = VerticalAlignment.Center }); detail.Children.Add(key);
-        stack.Children.Add(detail);
+        var toggle = new CheckBox { Content = title, IsChecked = cfg.Enabled, FontWeight = FontWeights.SemiBold };
+        var ctrl  = new CheckBox { Content = "Ctrl",  IsChecked = cfg.Modifiers.Contains("control"), Margin = new Thickness(0, 0, 10, 0) };
+        var shift = new CheckBox { Content = "Shift", IsChecked = cfg.Modifiers.Contains("shift"),   Margin = new Thickness(0, 0, 10, 0) };
+        var alt   = new CheckBox { Content = "Alt",   IsChecked = cfg.Modifiers.Contains("option") || cfg.Modifiers.Contains("alt"), Margin = new Thickness(0, 0, 10, 0) };
+        var win   = new CheckBox { Content = "Win",   IsChecked = cfg.Modifiers.Contains("command") || cfg.Modifiers.Contains("win"), Margin = new Thickness(0, 0, 10, 0) };
+        var key   = new TextBox { Text = cfg.Key, MaxLength = 1, Width = 40, VerticalContentAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center };
 
         void Persist()
         {
-            cfg.Enabled = toggle.IsOn;
-            var mods = new System.Collections.Generic.List<string>();
+            cfg.Enabled = toggle.IsChecked ?? false;
+            var mods = new List<string>();
             if (ctrl.IsChecked ?? false) mods.Add("control");
             if (shift.IsChecked ?? false) mods.Add("shift");
             if (alt.IsChecked ?? false) mods.Add("option");
@@ -149,23 +155,24 @@ public sealed partial class SettingsPage : Page
             if (cfg.Key.Length > 1) cfg.Key = cfg.Key.Substring(0, 1);
             SettingsStore.Shared.Save();
         }
-        toggle.Toggled += (_, _) => Persist();
+        toggle.Checked += (_, _) => Persist(); toggle.Unchecked += (_, _) => Persist();
         ctrl.Checked  += (_, _) => Persist(); ctrl.Unchecked  += (_, _) => Persist();
         shift.Checked += (_, _) => Persist(); shift.Unchecked += (_, _) => Persist();
         alt.Checked   += (_, _) => Persist(); alt.Unchecked   += (_, _) => Persist();
         win.Checked   += (_, _) => Persist(); win.Unchecked   += (_, _) => Persist();
         key.TextChanged += (_, _) => Persist();
 
-        return Card(stack);
+        var content = V(toggle, Hint(subtitle));
+        var detail = H(ctrl, shift, alt, win, Label("Key: ", size: 11), key);
+        detail.Margin = new Thickness(0, 8, 0, 0);
+        content.Children.Add(detail);
+        return Card(content);
     }
 
     private Border CaptureModeCard()
     {
         var s = SettingsStore.Shared.Settings;
-        var stack = new StackPanel { Spacing = 8 };
-        stack.Children.Add(new TextBlock { Text = "Capture Mode", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
-
-        var modePicker = new ComboBox { MinWidth = 160 };
+        var modePicker = new ComboBox { Width = 200, HorizontalAlignment = HorizontalAlignment.Left };
         modePicker.Items.Add(new ComboBoxItem { Content = "Selection", Tag = "selection", IsSelected = s.Capture.Mode == "selection" });
         modePicker.Items.Add(new ComboBoxItem { Content = "Full Screen", Tag = "fullScreen", IsSelected = s.Capture.Mode == "fullScreen" });
         modePicker.SelectionChanged += (_, _) =>
@@ -173,11 +180,8 @@ public sealed partial class SettingsPage : Page
             s.Capture.Mode = (modePicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "selection";
             SettingsStore.Shared.Save();
         };
-        stack.Children.Add(modePicker);
 
-        var delayRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        delayRow.Children.Add(new TextBlock { Text = "Default Delay:", VerticalAlignment = VerticalAlignment.Center });
-        var delayPicker = new ComboBox { MinWidth = 100 };
+        var delayPicker = new ComboBox { Width = 100, HorizontalAlignment = HorizontalAlignment.Left };
         foreach (var (label, sec) in new[] { ("None", 0), ("3 s", 3), ("5 s", 5), ("10 s", 10) })
         {
             delayPicker.Items.Add(new ComboBoxItem { Content = label, Tag = sec, IsSelected = s.Capture.DelaySeconds == sec });
@@ -187,136 +191,255 @@ public sealed partial class SettingsPage : Page
             s.Capture.DelaySeconds = (int)((delayPicker.SelectedItem as ComboBoxItem)?.Tag ?? 0);
             SettingsStore.Shared.Save();
         };
-        delayRow.Children.Add(delayPicker);
-        stack.Children.Add(delayRow);
 
-        return Card(stack);
+        return Card(V(
+            Label("Default Capture Mode", weight: FontWeights.SemiBold),
+            modePicker,
+            new Border { Height = 8 },
+            Label("Default Delay", weight: FontWeights.SemiBold),
+            delayPicker,
+            Hint("The tray menu always offers one-shot delay options regardless of this setting.")
+        ));
     }
 
     // ===== Watermark =====
     private void BuildWatermark()
     {
         var s = SettingsStore.Shared.Settings.Watermark;
-        var stack = new StackPanel { Spacing = 8 };
+        ContentRoot.Children.Add(Header("Watermark"));
 
-        var layoutPicker = new ComboBox { MinWidth = 180 };
-        layoutPicker.Items.Add(new ComboBoxItem { Content = "Single Location", Tag = "single", IsSelected = s.LayoutMode == "single" });
-        layoutPicker.Items.Add(new ComboBoxItem { Content = "Tiled Diagonal", Tag = "tiled", IsSelected = s.LayoutMode == "tiled" });
+        var twoCol = new Grid();
+        twoCol.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
+        twoCol.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var left = new StackPanel();
+        Grid.SetColumn(left, 0);
+
+        // Layout mode
+        var layoutPicker = new ComboBox { Width = 180, HorizontalAlignment = HorizontalAlignment.Left };
+        layoutPicker.Items.Add(new ComboBoxItem { Content = "Single Position", Tag = "single", IsSelected = s.LayoutMode == "single" });
+        layoutPicker.Items.Add(new ComboBoxItem { Content = "Tiled (Diagonal)", Tag = "tiled", IsSelected = s.LayoutMode == "tiled" });
         layoutPicker.SelectionChanged += (_, _) =>
         {
             s.LayoutMode = (layoutPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "single";
             SettingsStore.Shared.Save();
+            BuildTab();
         };
-        stack.Children.Add(new TextBlock { Text = "Layout Mode", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
-        stack.Children.Add(layoutPicker);
+        left.Children.Add(Card(V(Label("Layout", weight: FontWeights.SemiBold), layoutPicker)));
 
         // Text watermark
-        var txtToggle = new ToggleSwitch { Header = "Text watermark", IsOn = s.Text.Enabled };
-        var txtField = new TextBox { Header = "Text", Text = s.Text.Text, IsEnabled = s.Text.Enabled };
-        txtToggle.Toggled += (_, _) => { s.Text.Enabled = txtToggle.IsOn; txtField.IsEnabled = txtToggle.IsOn; SettingsStore.Shared.Save(); };
+        var txtToggle = new CheckBox { Content = "Text watermark", IsChecked = s.Text.Enabled, FontWeight = FontWeights.SemiBold };
+        var txtField = new TextBox { Text = s.Text.Text, Width = 240, HorizontalAlignment = HorizontalAlignment.Left, IsEnabled = s.Text.Enabled, Margin = new Thickness(0, 6, 0, 0) };
+        txtToggle.Checked += (_, _) => { s.Text.Enabled = true; txtField.IsEnabled = true; SettingsStore.Shared.Save(); };
+        txtToggle.Unchecked += (_, _) => { s.Text.Enabled = false; txtField.IsEnabled = false; SettingsStore.Shared.Save(); };
         txtField.TextChanged += (_, _) => { s.Text.Text = txtField.Text; SettingsStore.Shared.Save(); };
-        var textStack = new StackPanel { Spacing = 6 };
-        textStack.Children.Add(txtToggle); textStack.Children.Add(txtField);
+        left.Children.Add(Card(V(txtToggle, txtField)));
 
         // Logo watermark
-        var logoToggle = new ToggleSwitch { Header = "Logo watermark", IsOn = s.Logo.Enabled };
-        var logoPath = new TextBox { Header = "Logo path", Text = s.Logo.Path, IsReadOnly = true };
-        var browseBtn = new Button { Content = "Browse…" };
-        browseBtn.Click += async (_, _) =>
+        var logoToggle = new CheckBox { Content = "Logo watermark", IsChecked = s.Logo.Enabled, FontWeight = FontWeights.SemiBold };
+        var logoPathBox = new TextBox { Text = s.Logo.Path, IsReadOnly = true, Width = 200, Margin = new Thickness(0, 0, 8, 0) };
+        var browseBtn = new Button { Content = "Browse…", Padding = new Thickness(10, 4, 10, 4) };
+        browseBtn.Click += (_, _) =>
         {
-            var picker = new Windows.Storage.Pickers.FileOpenPicker();
-            picker.FileTypeFilter.Add(".png"); picker.FileTypeFilter.Add(".jpg"); picker.FileTypeFilter.Add(".jpeg");
-            // unpackaged WinUI 3: requires HWND init.
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, App.MainWindowInstance!.Hwnd);
-            var file = await picker.PickSingleFileAsync();
-            if (file != null)
+            var dlg = new OpenFileDialog { Filter = "Images|*.png;*.jpg;*.jpeg" };
+            if (dlg.ShowDialog() == true)
             {
-                s.Logo.Path = file.Path; logoPath.Text = file.Path; SettingsStore.Shared.Save();
+                s.Logo.Path = dlg.FileName;
+                logoPathBox.Text = dlg.FileName;
+                SettingsStore.Shared.Save();
             }
         };
-        var logoStack = new StackPanel { Spacing = 6 };
-        logoStack.Children.Add(logoToggle); logoStack.Children.Add(logoPath); logoStack.Children.Add(browseBtn);
-        logoToggle.Toggled += (_, _) => { s.Logo.Enabled = logoToggle.IsOn; SettingsStore.Shared.Save(); };
+        logoToggle.Checked += (_, _) => { s.Logo.Enabled = true; SettingsStore.Shared.Save(); };
+        logoToggle.Unchecked += (_, _) => { s.Logo.Enabled = false; SettingsStore.Shared.Save(); };
+        var logoRow = H(logoPathBox, browseBtn);
+        logoRow.Margin = new Thickness(0, 6, 0, 0);
+        left.Children.Add(Card(V(logoToggle, logoRow)));
 
-        // Sliders
-        var opacity = new Slider { Header = "Opacity", Minimum = 10, Maximum = 100, Value = s.Logo.Opacity * 100, MinWidth = 200 };
+        // Position (single mode)
+        if (s.LayoutMode == "single")
+        {
+            var posPicker = new ComboBox { Width = 200, HorizontalAlignment = HorizontalAlignment.Left };
+            foreach (var (label, tag) in new[] {
+                ("Bottom Right", "bottomRight"), ("Bottom Left", "bottomLeft"),
+                ("Top Right", "topRight"),       ("Top Left", "topLeft"),
+                ("Center", "center"),
+            })
+            {
+                posPicker.Items.Add(new ComboBoxItem { Content = label, Tag = tag, IsSelected = s.Logo.PositionMode == tag });
+            }
+            posPicker.SelectionChanged += (_, _) =>
+            {
+                s.Logo.PositionMode = (posPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "bottomRight";
+                SettingsStore.Shared.Save();
+            };
+            left.Children.Add(Card(V(Label("Position", weight: FontWeights.SemiBold), posPicker)));
+        }
+
+        // Tiled options
+        if (s.LayoutMode == "tiled")
+        {
+            var patternPicker = new ComboBox { Width = 200, HorizontalAlignment = HorizontalAlignment.Left };
+            foreach (var (label, tag) in new[] { ("Aligned", "aligned"), ("Brick", "brick"), ("Chaos", "random") })
+            {
+                patternPicker.Items.Add(new ComboBoxItem { Content = label, Tag = tag, IsSelected = s.TilePattern == tag });
+            }
+            patternPicker.SelectionChanged += (_, _) =>
+            {
+                s.TilePattern = (patternPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "aligned";
+                SettingsStore.Shared.Save();
+            };
+
+            var spacing = new Slider { Minimum = 80, Maximum = 400, Value = s.Spacing, Width = 240 };
+            spacing.ValueChanged += (_, _) => { s.Spacing = spacing.Value; SettingsStore.Shared.Save(); };
+
+            left.Children.Add(Card(V(
+                Label("Pattern", weight: FontWeights.SemiBold), patternPicker,
+                new Border { Height = 8 },
+                Label("Spacing", weight: FontWeights.SemiBold), spacing
+            )));
+        }
+
+        // Opacity + size
+        var opacity = new Slider { Minimum = 10, Maximum = 100, Value = s.Logo.Opacity * 100, Width = 240 };
         opacity.ValueChanged += (_, _) => { s.Logo.Opacity = opacity.Value / 100.0; SettingsStore.Shared.Save(); };
-        var size = new Slider { Header = "Logo size (px)", Minimum = 50, Maximum = 300, Value = s.Logo.Size, MinWidth = 200 };
+
+        var size = new Slider { Minimum = 50, Maximum = 300, Value = s.Logo.Size, Width = 240 };
         size.ValueChanged += (_, _) => { s.Logo.Size = size.Value; SettingsStore.Shared.Save(); };
 
-        ContentRoot.Children.Add(Section("Watermark Settings",
-            Card(stack),
-            Card(textStack),
-            Card(logoStack),
-            Card(new StackPanel { Spacing = 6, Children = { opacity, size } })));
+        left.Children.Add(Card(V(
+            Label("Opacity", weight: FontWeights.SemiBold), opacity,
+            new Border { Height = 8 },
+            Label("Logo size (px)", weight: FontWeights.SemiBold), size
+        )));
+
+        twoCol.Children.Add(left);
+
+        var preview = new WatermarkPreview { Margin = new Thickness(20, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top };
+        Grid.SetColumn(preview, 1);
+        twoCol.Children.Add(preview);
+
+        ContentRoot.Children.Add(twoCol);
     }
 
     // ===== Storage =====
     private void BuildStorage()
     {
         var s = SettingsStore.Shared.Settings.Cleanup;
-        var savePathBox = new TextBox { Header = "Save folder", Text = string.IsNullOrEmpty(s.SaveDirectory) ? "Default (Pictures\\QPARK Shot)" : s.SaveDirectory, IsReadOnly = true };
-        var browse = new Button { Content = "Browse…" };
-        browse.Click += async (_, _) =>
-        {
-            var picker = new Windows.Storage.Pickers.FolderPicker();
-            picker.FileTypeFilter.Add("*");
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, App.MainWindowInstance!.Hwnd);
-            var folder = await picker.PickSingleFolderAsync();
-            if (folder != null) { s.SaveDirectory = folder.Path; savePathBox.Text = folder.Path; SettingsStore.Shared.Save(); }
-        };
-        var saveStack = new StackPanel { Spacing = 6, Children = { savePathBox, browse } };
+        ContentRoot.Children.Add(Header("Storage & Cleanup"));
 
-        var modePicker = new ComboBox { Header = "Cleanup policy", MinWidth = 220 };
+        var savePath = new TextBox
+        {
+            Text = string.IsNullOrEmpty(s.SaveDirectory) ? "Default (Pictures\\QPARK Shot)" : s.SaveDirectory,
+            IsReadOnly = true,
+            Width = 320,
+            Margin = new Thickness(0, 0, 8, 0),
+        };
+        var browse = new Button { Content = "Browse…", Padding = new Thickness(10, 4, 10, 4) };
+        browse.Click += (_, _) =>
+        {
+            var dlg = new System.Windows.Forms.FolderBrowserDialog();
+            if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                s.SaveDirectory = dlg.SelectedPath;
+                savePath.Text = dlg.SelectedPath;
+                SettingsStore.Shared.Save();
+            }
+        };
+
+        var modePicker = new ComboBox { Width = 240, HorizontalAlignment = HorizontalAlignment.Left };
         modePicker.Items.Add(new ComboBoxItem { Content = "Never delete", Tag = "never", IsSelected = s.Mode == "never" });
         modePicker.Items.Add(new ComboBoxItem { Content = "Delete after duration", Tag = "afterDuration", IsSelected = s.Mode == "afterDuration" });
-        modePicker.SelectionChanged += (_, _) => { s.Mode = (modePicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "never"; SettingsStore.Shared.Save(); };
+        modePicker.SelectionChanged += (_, _) =>
+        {
+            s.Mode = (modePicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "never";
+            SettingsStore.Shared.Save();
+        };
 
-        var hours = new Slider { Header = "Retain (hours)", Minimum = 1, Maximum = 168, Value = s.DurationSeconds / 3600.0, MinWidth = 250 };
+        var hours = new Slider { Minimum = 1, Maximum = 168, Value = s.DurationSeconds / 3600.0, Width = 280 };
         hours.ValueChanged += (_, _) => { s.DurationSeconds = hours.Value * 3600.0; SettingsStore.Shared.Save(); };
 
-        var includeSaved = new CheckBox { Content = "Include manually saved files in cleanup", IsChecked = s.IncludeSavedFiles };
-        includeSaved.Checked += (_, _) => { s.IncludeSavedFiles = true; SettingsStore.Shared.Save(); };
-        includeSaved.Unchecked += (_, _) => { s.IncludeSavedFiles = false; SettingsStore.Shared.Save(); };
+        var include = new CheckBox { Content = "Include manually saved files in cleanup", IsChecked = s.IncludeSavedFiles, Margin = new Thickness(0, 6, 0, 0) };
+        include.Checked += (_, _) => { s.IncludeSavedFiles = true; SettingsStore.Shared.Save(); };
+        include.Unchecked += (_, _) => { s.IncludeSavedFiles = false; SettingsStore.Shared.Save(); };
 
-        ContentRoot.Children.Add(Section("Storage & Cache",
-            Card(saveStack),
-            Card(new StackPanel { Spacing = 8, Children = { modePicker, hours, includeSaved } })));
+        ContentRoot.Children.Add(Card(V(
+            Label("Save Folder", weight: FontWeights.SemiBold),
+            H(savePath, browse)
+        )));
+        ContentRoot.Children.Add(Card(V(
+            Label("Cleanup Policy", weight: FontWeights.SemiBold),
+            modePicker,
+            new Border { Height = 8 },
+            Label("Retention (hours)", weight: FontWeights.SemiBold),
+            hours, include
+        )));
     }
 
     // ===== Buffer =====
     private void BuildBuffer()
     {
         var s = SettingsStore.Shared.Settings.Queue;
-        var toggle = new ToggleSwitch { Header = "Show buffer panel in editor", IsOn = s.PanelEnabled };
-        toggle.Toggled += (_, _) => { s.PanelEnabled = toggle.IsOn; SettingsStore.Shared.Save(); };
-        var hint = new TextBlock
-        {
-            Text = "Keeps every screenshot you take in a vertical carousel on the left side of the editor. Click any item to switch, hover for preview-with-watermark and remove-from-buffer actions. The buffer lives only for the current session and is wiped on app restart.",
-            FontSize = 11,
-            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-            TextWrapping = TextWrapping.Wrap,
-        };
-        var clearBtn = new Button { Content = "Clear buffer", IsEnabled = ShotQueueStore.Shared.Items.Count > 0 };
+        ContentRoot.Children.Add(Header("Shot Buffer"));
+
+        var toggle = new CheckBox { Content = "Show buffer panel in editor", IsChecked = s.PanelEnabled, FontWeight = FontWeights.SemiBold };
+        toggle.Checked += (_, _) => { s.PanelEnabled = true; SettingsStore.Shared.Save(); };
+        toggle.Unchecked += (_, _) => { s.PanelEnabled = false; SettingsStore.Shared.Save(); };
+        var hint = Hint(
+            "Keeps every screenshot you take in a vertical carousel on the left side of the editor. " +
+            "Click any item to switch, hover for preview-with-watermark and remove actions. " +
+            "The buffer lives only for the current session and is wiped on app restart.");
+
+        var clearBtn = new Button { Content = "Clear buffer", IsEnabled = ShotQueueStore.Shared.Items.Count > 0, Padding = new Thickness(10, 4, 10, 4), HorizontalAlignment = HorizontalAlignment.Left };
         clearBtn.Click += (_, _) => { ShotQueueStore.Shared.ClearAll(); clearBtn.IsEnabled = false; };
 
-        ContentRoot.Children.Add(Section("Shot Buffer",
-            Card(new StackPanel { Spacing = 8, Children = { toggle, hint } }),
-            Card(new StackPanel { Spacing = 6, Children = { new TextBlock { Text = $"Buffer contains {ShotQueueStore.Shared.Items.Count} item(s).", FontSize = 12 }, clearBtn } })));
+        ContentRoot.Children.Add(Card(V(toggle, hint)));
+        ContentRoot.Children.Add(Card(V(
+            Label($"Buffer contains {ShotQueueStore.Shared.Items.Count} item(s)."),
+            clearBtn
+        )));
     }
 
     // ===== About =====
     private void BuildAbout()
     {
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.1.0";
+        ContentRoot.Children.Add(Header("About QPARK Shot"));
 
-        var box = new StackPanel { Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center };
-        box.Children.Add(new FontIcon { Glyph = "", FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons"), FontSize = 54, HorizontalAlignment = HorizontalAlignment.Center, Foreground = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"] });
-        box.Children.Add(new TextBlock { Text = "QPARK Shot", FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center });
-        box.Children.Add(new TextBlock { Text = $"Version {version}", FontSize = 11, Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"], HorizontalAlignment = HorizontalAlignment.Center });
-        box.Children.Add(new HyperlinkButton { Content = "QPARK.IO", NavigateUri = new Uri("https://qpark.io"), HorizontalAlignment = HorizontalAlignment.Center });
-        box.Children.Add(new TextBlock { Text = "A professional screenshots workspace utility.", FontSize = 12, Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"], HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap });
+        var box = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+        box.Children.Add(new TextBlock
+        {
+            Text = "QPARK Shot", FontSize = 24, FontWeight = FontWeights.Bold,
+            HorizontalAlignment = HorizontalAlignment.Center,
+        });
+        box.Children.Add(new TextBlock
+        {
+            Text = $"Version {version}", FontSize = 12,
+            Foreground = (Brush)Application.Current.Resources["SecondaryText"],
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 4, 0, 12),
+        });
 
-        ContentRoot.Children.Add(Section("About QPARK Shot", Card(box)));
+        var link = new TextBlock { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 12) };
+        var hyperlink = new Hyperlink(new Run("QPARK.IO")) { NavigateUri = new Uri("https://qpark.io") };
+        hyperlink.RequestNavigate += (_, e) => { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.ToString()) { UseShellExecute = true }); };
+        link.Inlines.Add(hyperlink);
+        box.Children.Add(link);
+
+        box.Children.Add(new TextBlock
+        {
+            Text = "Professional screenshots workspace utility.",
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Foreground = (Brush)Application.Current.Resources["SecondaryText"],
+        });
+        box.Children.Add(new TextBlock
+        {
+            Text = "Copyright © 2026 QPARK. All rights reserved.",
+            FontSize = 10,
+            Margin = new Thickness(0, 16, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Foreground = (Brush)Application.Current.Resources["SecondaryText"],
+        });
+
+        ContentRoot.Children.Add(Card(box));
     }
 }

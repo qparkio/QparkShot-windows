@@ -1,0 +1,19 @@
+<UserControl
+    x:Class="QPARKShot.Views.WatermarkPreview"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Width="340" Height="220">
+    <StackPanel>
+        <TextBlock Text="Live Preview" FontSize="11" FontWeight="SemiBold"
+                   Foreground="{StaticResource SecondaryText}" Margin="0,0,0,6" />
+        <Border CornerRadius="6" ClipToBounds="True" Height="190">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Offset="0" Color="#3B6FE3" />
+                    <GradientStop Offset="1" Color="#4F4690" />
+                </LinearGradientBrush>
+            </Border.Background>
+            <Image x:Name="PreviewImage" Stretch="Uniform" />
+        </Border>
+    </StackPanel>
+</UserControl>

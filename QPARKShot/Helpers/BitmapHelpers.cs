@@ -2,28 +2,22 @@ using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using Microsoft.UI.Xaml.Media.Imaging;
+using System.Windows.Media.Imaging;
 
 namespace QPARKShot.Helpers;
 
 public static class BitmapHelpers
 {
-    /// <summary>Mirror of macOS <c>loadImageForRendering</c>.</summary>
     public static Bitmap? LoadBitmap(string path)
     {
         try
         {
-            // Decode without locking the file.
             using var raw = new Bitmap(path);
             return new Bitmap(raw);
         }
-        catch
-        {
-            return null;
-        }
+        catch { return null; }
     }
 
-    /// <summary>Mirror of macOS <c>makeThumbnailImage</c>. Returns a downscaled clone.</summary>
     public static Bitmap? Thumbnail(string path, int maxPixelSize)
     {
         var src = LoadBitmap(path);
@@ -51,7 +45,6 @@ public static class BitmapHelpers
         }
     }
 
-    /// <summary>Save Bitmap as PNG.</summary>
     public static bool SavePng(Bitmap bitmap, string path)
     {
         try
@@ -61,13 +54,9 @@ public static class BitmapHelpers
             bitmap.Save(path, ImageFormat.Png);
             return true;
         }
-        catch
-        {
-            return false;
-        }
+        catch { return false; }
     }
 
-    /// <summary>Encode bitmap to PNG bytes (for clipboard / share streams).</summary>
     public static byte[] ToPngBytes(Bitmap bitmap)
     {
         using var ms = new MemoryStream();
@@ -75,21 +64,18 @@ public static class BitmapHelpers
         return ms.ToArray();
     }
 
-    /// <summary>Convert GDI+ <see cref="Bitmap"/> to WinUI <see cref="BitmapImage"/>.</summary>
-    public static async System.Threading.Tasks.Task<BitmapImage> ToBitmapImageAsync(Bitmap bitmap)
+    /// <summary>Convert GDI+ Bitmap → WPF BitmapSource (frozen, safe to use on UI thread).</summary>
+    public static BitmapSource ToBitmapSource(Bitmap bitmap)
     {
-        var bytes = ToPngBytes(bitmap);
-        var image = new BitmapImage();
-        using var stream = new Windows.Storage.Streams.InMemoryRandomAccessStream();
-        using (var writer = new Windows.Storage.Streams.DataWriter(stream))
-        {
-            writer.WriteBytes(bytes);
-            await writer.StoreAsync();
-            await writer.FlushAsync();
-            writer.DetachStream();
-        }
-        stream.Seek(0);
-        await image.SetSourceAsync(stream);
-        return image;
+        using var ms = new MemoryStream();
+        bitmap.Save(ms, ImageFormat.Png);
+        ms.Seek(0, SeekOrigin.Begin);
+        var bmp = new BitmapImage();
+        bmp.BeginInit();
+        bmp.CacheOption = BitmapCacheOption.OnLoad;
+        bmp.StreamSource = ms;
+        bmp.EndInit();
+        bmp.Freeze();
+        return bmp;
     }
 }

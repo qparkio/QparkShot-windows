@@ -1,26 +1,24 @@
 using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media.Imaging;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using QPARKShot.Helpers;
 using QPARKShot.Services;
-using Windows.Storage;
 
 namespace QPARKShot.Views;
 
-public sealed partial class ScreenshotCard : UserControl
+public partial class ScreenshotCard : UserControl
 {
     private string? _path;
+    private Point _dragStart;
+    private bool _isDragging;
 
     public ScreenshotCard()
     {
-        this.InitializeComponent();
-        PointerEntered += (_, _) => HoverOverlay.Visibility = Visibility.Visible;
-        PointerExited += (_, _) => HoverOverlay.Visibility = Visibility.Collapsed;
+        InitializeComponent();
         DataContextChanged += async (_, _) => await LoadAsync();
     }
 
@@ -31,32 +29,44 @@ public sealed partial class ScreenshotCard : UserControl
 
         NameText.Text = Path.GetFileName(_path);
 
-        // Load a downscaled bitmap for the UI.
         await Task.Run(() =>
         {
             using var thumb = BitmapHelpers.Thumbnail(_path, 240);
             if (thumb == null) return;
-            var bytes = BitmapHelpers.ToPngBytes(thumb);
-            DispatcherQueue.TryEnqueue(async () =>
-            {
-                var bmp = new BitmapImage();
-                using var stream = new Windows.Storage.Streams.InMemoryRandomAccessStream();
-                using (var writer = new Windows.Storage.Streams.DataWriter(stream))
-                {
-                    writer.WriteBytes(bytes);
-                    await writer.StoreAsync();
-                    await writer.FlushAsync();
-                    writer.DetachStream();
-                }
-                stream.Seek(0);
-                await bmp.SetSourceAsync(stream);
-                Thumb.Source = bmp;
-            });
+            var src = BitmapHelpers.ToBitmapSource(thumb);
+            Dispatcher.Invoke(() => Thumb.Source = src);
         });
     }
 
-    private void OnTapped(object sender, TappedRoutedEventArgs e)
+    private void OnHoverEnter(object sender, MouseEventArgs e) => HoverOverlay.Visibility = Visibility.Visible;
+    private void OnHoverExit(object sender, MouseEventArgs e) => HoverOverlay.Visibility = Visibility.Collapsed;
+
+    private void OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
+        _dragStart = e.GetPosition(this);
+        _isDragging = false;
+    }
+
+    private void OnPreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _isDragging || string.IsNullOrEmpty(_path)) return;
+        var p = e.GetPosition(this);
+        if (Math.Abs(p.X - _dragStart.X) > SystemParameters.MinimumHorizontalDragDistance ||
+            Math.Abs(p.Y - _dragStart.Y) > SystemParameters.MinimumVerticalDragDistance)
+        {
+            _isDragging = true;
+            try
+            {
+                var data = new DataObject(DataFormats.FileDrop, new[] { _path });
+                DragDrop.DoDragDrop(this, data, DragDropEffects.Copy);
+            }
+            catch (Exception ex) { Logger.LogException("DragDrop", ex); }
+        }
+    }
+
+    private void OnTapped(object sender, RoutedEventArgs e)
+    {
+        if (_isDragging) { _isDragging = false; return; }
         if (string.IsNullOrEmpty(_path)) return;
         var item = ShotQueueStore.Shared.Enqueue(_path);
         App.MainWindowInstance?.ShowEditor(item.Id);
@@ -66,39 +76,27 @@ public sealed partial class ScreenshotCard : UserControl
     {
         if (string.IsNullOrEmpty(_path)) return;
         try { File.Delete(_path); } catch { }
-        // Tell the parent gallery to refresh.
-        if (this.FindAscendant<GalleryPage>() is { } g)
-        {
-            var method = typeof(GalleryPage).GetMethod("LoadRecentAsync",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (method?.Invoke(g, null) is Task t) await t;
-        }
+        var gallery = FindAncestor<GalleryPage>(this);
+        if (gallery != null) await gallery.LoadRecentAsync();
     }
 
-    private async void OnDragStarting(UIElement sender, DragStartingEventArgs args)
+    private async void OnCopyClipboard(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_path)) return;
+        var bmp = await Task.Run(() => BitmapHelpers.LoadBitmap(_path));
+        if (bmp != null) { await ClipboardService.SetBitmapAsync(bmp); bmp.Dispose(); }
+    }
+
+    private void OnShowInExplorer(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrEmpty(_path) || !File.Exists(_path)) return;
-        var deferral = args.GetDeferral();
-        try
-        {
-            var file = await StorageFile.GetFileFromPathAsync(_path);
-            args.Data.SetStorageItems(new IStorageItem[] { file });
-            args.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-        }
-        catch { }
-        finally
-        {
-            deferral.Complete();
-        }
+        Process.Start("explorer.exe", $"/select,\"{_path}\"");
     }
-}
 
-internal static class VisualTreeHelperExt
-{
-    public static T? FindAscendant<T>(this DependencyObject from) where T : DependencyObject
+    private static T? FindAncestor<T>(DependencyObject d) where T : DependencyObject
     {
-        var p = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(from);
-        while (p != null && p is not T) p = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(p);
+        var p = System.Windows.Media.VisualTreeHelper.GetParent(d);
+        while (p != null && p is not T) p = System.Windows.Media.VisualTreeHelper.GetParent(p);
         return p as T;
     }
 }

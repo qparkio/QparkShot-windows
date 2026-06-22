@@ -1,17 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
-    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <RootNamespace>QPARKShot</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x64</Platforms>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
-    <UseWinUI>true</UseWinUI>
-    <!-- EnableMsixTooling=true is required for WinUI 3 even when packaging
-         as unpackaged exe; it controls XAML/PRI asset processing, not MSIX. -->
-    <EnableMsixTooling>true</EnableMsixTooling>
-    <WindowsPackageType>None</WindowsPackageType>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
@@ -23,61 +19,16 @@
     <Product>QPARK Shot</Product>
     <Company>QPARK</Company>
     <Copyright>Copyright © 2026 QPARK</Copyright>
-    <UseRidGraph>true</UseRidGraph>
-    <!-- Bundle the WindowsAppSDK runtime locally so the app runs on machines
-         without the global Windows App Runtime installed. -->
-    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>true</SelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>
     <PublishSingleFile>false</PublishSingleFile>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240607000" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.756" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-    <PackageReference Include="H.NotifyIcon.WinUI" Version="2.0.131" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
   </ItemGroup>
-
-  <!-- Force-remove the bootstrap auto-initializer for self-contained builds.
-       Even with WindowsAppSDKSelfContained=true, the 1.5 SDK still injects
-       MddBootstrapAutoInitializer.cs whose [ModuleInitializer] calls
-       Bootstrap.Initialize(0x00010005). That call ignores the locally-bundled
-       runtime and demands a globally-installed MSIX package, popping the
-       infamous "requires Windows App Runtime 1.5" dialog. We don't want it. -->
-  <Target Name="RemoveBootstrapAutoInitializer" AfterTargets="ResolvePackageAssets">
-    <ItemGroup>
-      <Compile Remove="@(Compile)" Condition="'%(FileName)%(Extension)' == 'MddBootstrapAutoInitializer.cs'" />
-    </ItemGroup>
-  </Target>
-
-  <!-- msbuild -t:Publish leaves the compiled XAML (.xbf) and the project's
-       resources.pri in OutputPath but doesn't copy them to PublishDir for
-       self-contained unpackaged WinUI 3 apps. Without these files
-       Microsoft.UI.Xaml.Application.LoadComponent throws XamlParseException
-       at runtime. Force-copy them after Publish. -->
-  <Target Name="CopyWinUIAssetsToPublish" AfterTargets="Publish">
-    <ItemGroup>
-      <_WinUIXbf Include="$(OutputPath)**\*.xbf" />
-      <_WinUIPri Include="$(OutputPath)*.pri" />
-    </ItemGroup>
-    <Copy SourceFiles="@(_WinUIXbf)"
-          DestinationFiles="@(_WinUIXbf -> '$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(_WinUIPri)"
-          DestinationFolder="$(PublishDir)"
-          SkipUnchangedFiles="true" />
-    <Message Importance="high" Text="Copied @(_WinUIXbf->Count()) XBF and @(_WinUIPri->Count()) PRI files to $(PublishDir)" />
-  </Target>
-
-  <!-- Strip non-English .NET satellite-resource folders from publish output.
-       These hold translated runtime/error strings for ~90 locales nobody
-       ever sees in an English UI. Removing them cuts ~90 folders out of the
-       install directory without affecting functionality. -->
-  <Target Name="TrimSatelliteLocales" AfterTargets="CopyWinUIAssetsToPublish">
-    <Exec Command="powershell -NoProfile -Command &quot;$keep = @('Assets','Views','Microsoft.UI.Xaml','en-us','en-US'); $cultureRegex = '^[a-z]{2,3}([-][A-Za-z]+){0,3}$'; $count = 0; Get-ChildItem -Path '$(PublishDir)' -Directory | Where-Object { $keep -notcontains $_.Name -and $_.Name -match $cultureRegex } | ForEach-Object { Remove-Item -Recurse -Force $_.FullName; $count++ }; Write-Host (\&quot;Removed $count satellite locale folders from publish output.\&quot;)&quot;" />
-  </Target>
 
   <ItemGroup>
     <Content Include="Assets\AppIcon.ico">

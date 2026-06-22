@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Windows.Foundation;
+using System.Windows;
 
 namespace QPARKShot.Models;
 
@@ -13,11 +13,6 @@ public enum ToolType
     Text
 }
 
-/// <summary>
-/// Editor annotation. Plain classes (not records) so the WinUI XAML type-info
-/// generator can produce setters without complaining about init-only props.
-/// Coordinates are in source-image pixel space.
-/// </summary>
 public abstract class Annotation
 {
     public Guid Id { get; set; } = Guid.NewGuid();

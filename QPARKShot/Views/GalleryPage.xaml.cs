@@ -4,31 +4,28 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.UI.Dispatching;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Navigation;
+using System.Windows;
+using System.Windows.Controls;
 using QPARKShot.Services;
 
 namespace QPARKShot.Views;
 
-public sealed partial class GalleryPage : Page
+public partial class GalleryPage : Page
 {
     public ObservableCollection<string> Screenshots { get; } = new();
 
     public GalleryPage()
     {
-        this.InitializeComponent();
-        GalleryRepeater.ItemsSource = Screenshots;
+        InitializeComponent();
+        GalleryItems.ItemsSource = Screenshots;
+        Loaded += async (_, _) =>
+        {
+            await LoadRecentAsync();
+            _ = CleanupService.PerformAsync();
+        };
     }
 
-    protected override async void OnNavigatedTo(NavigationEventArgs e)
-    {
-        await LoadRecentAsync();
-        _ = CleanupService.PerformAsync();
-    }
-
-    private async Task LoadRecentAsync()
+    public async Task LoadRecentAsync()
     {
         var customDir = SettingsStore.Shared.Settings.Cleanup.SaveDirectory;
         var pics = !string.IsNullOrWhiteSpace(customDir) && Directory.Exists(customDir)
@@ -60,10 +57,7 @@ public sealed partial class GalleryPage : Page
         await CaptureService.Shared.TriggerCapture();
     }
 
-    private void OnSettings(object sender, RoutedEventArgs e)
-    {
-        App.MainWindowInstance?.ShowSettings();
-    }
+    private void OnSettings(object sender, RoutedEventArgs e) => App.MainWindowInstance?.ShowSettings();
 
     private async void OnClearCache(object sender, RoutedEventArgs e)
     {

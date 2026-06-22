@@ -14,57 +14,50 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup MSBuild (from pre-installed VS)
-        uses: microsoft/setup-msbuild@v2
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-      - name: NuGet restore
-        run: msbuild QPARKShot.sln -t:Restore -p:Configuration=Release -p:Platform=x64
+      - name: Restore
+        run: dotnet restore QPARKShot.sln
 
-      - name: Build + Publish (self-contained)
+      - name: Publish (self-contained, win-x64)
         run: |
-          $publishDir = Join-Path (Get-Location) "build\Release\"
-          msbuild QPARKShot\QPARKShot.csproj `
-            -t:Publish `
-            -p:Configuration=Release `
-            -p:Platform=x64 `
-            -p:RuntimeIdentifier=win-x64 `
-            -p:SelfContained=true `
-            -p:WindowsAppSDKSelfContained=true `
-            -p:PublishDir=$publishDir `
-            -p:PublishReadyToRun=false `
-            -p:PublishSingleFile=false `
-            -p:WindowsPackageType=None
+          dotnet publish QPARKShot/QPARKShot.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:PublishReadyToRun=false -p:PublishSingleFile=false `
+            -o build/Release
+          if ($LASTEXITCODE -ne 0) { throw "publish failed" }
 
-      - name: Build size (debug)
+      - name: Show output size
         run: |
-          Write-Host "==> build/Release size:"
-          if (Test-Path build/Release) {
-            $size = (Get-ChildItem -Recurse build/Release | Measure-Object -Property Length -Sum).Sum / 1MB
-            Write-Host ("Total: {0:N2} MB" -f $size)
-            Get-ChildItem build/Release | Select-Object Name, Length | Sort-Object Length -Descending | Select-Object -First 10 | Format-Table -AutoSize | Out-String -Width 200
-          }
+          $size = (Get-ChildItem -Recurse build/Release | Measure-Object Length -Sum).Sum / 1MB
+          Write-Host ("Total: {0:N1} MB" -f $size)
+          $folders = (Get-ChildItem build/Release -Directory).Count
+          $files = (Get-ChildItem build/Release -File).Count
+          Write-Host "Folders: $folders, Files (top-level): $files"
 
       - name: Install NSIS
         run: choco install nsis -y --no-progress
 
       - name: Build NSIS installer
         run: |
-          New-Item -ItemType Directory -Force -Path build\Installer | Out-Null
-          & 'C:\Program Files (x86)\NSIS\makensis.exe' /V2 scripts\installer.nsi
-          if ($LASTEXITCODE -ne 0) { throw "makensis failed with exit code $LASTEXITCODE" }
-          Write-Host "==> Installer:"
-          Get-ChildItem build\Installer | Format-Table -AutoSize
+          New-Item -ItemType Directory -Force -Path build/Installer | Out-Null
+          & 'C:\Program Files (x86)\NSIS\makensis.exe' /V2 scripts/installer.nsi
+          if ($LASTEXITCODE -ne 0) { throw "makensis failed" }
+          Get-ChildItem build/Installer | Format-Table -AutoSize
 
-      - name: Upload Installer
+      - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
           name: QPARKShot-Setup
           path: build/Installer/QPARKShot-Setup-*.exe
           if-no-files-found: error
 
-      - name: Upload portable Release build (zipped folder)
+      - name: Upload portable build
         uses: actions/upload-artifact@v4
         with:
-          name: QPARKShot-Windows-Release
+          name: QPARKShot-Windows-Portable
           path: build/Release/**
           if-no-files-found: error

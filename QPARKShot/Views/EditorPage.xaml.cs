@@ -1,74 +1,81 @@
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media.Imaging;
-using Microsoft.UI.Xaml.Navigation;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using QPARKShot.Helpers;
 using QPARKShot.Models;
 using QPARKShot.Services;
-using Windows.ApplicationModel.DataTransfer;
-using Windows.Foundation;
 
 namespace QPARKShot.Views;
 
-public sealed partial class EditorPage : Page
+public partial class EditorPage : Page
 {
     private Guid _itemId;
     private Bitmap? _sourceBitmap;
 
-    public EditorPage()
+    public EditorPage(Guid itemId)
     {
-        this.InitializeComponent();
-        ToolPicker.SelectedIndex = 1; // Freehand
-    }
-
-    protected override async void OnNavigatedTo(NavigationEventArgs e)
-    {
-        if (e.Parameter is Guid id)
-        {
-            _itemId = id;
-            ShotQueueStore.Shared.ActiveId = id;
-            QueueSidebar.OnRequestOpen = ShowItem;
-        }
-        await LoadActiveAsync();
+        InitializeComponent();
+        _itemId = itemId;
+        ShotQueueStore.Shared.ActiveId = itemId;
+        QueueSidebar.OnRequestOpen = ShowItem;
+        Loaded += async (_, _) => await LoadActiveAsync();
     }
 
     private async Task LoadActiveAsync()
     {
         var item = ShotQueueStore.Shared.Item(_itemId);
         if (item == null) return;
-
+        _sourceBitmap?.Dispose();
         _sourceBitmap = await Task.Run(() => BitmapHelpers.LoadBitmap(item.Path));
         if (_sourceBitmap == null) return;
-
         Canvas.LoadImage(_sourceBitmap);
     }
 
-    private void ShowItem(Guid id)
+    private async void ShowItem(Guid id)
     {
         _itemId = id;
         ShotQueueStore.Shared.ActiveId = id;
-        _ = LoadActiveAsync();
+        await LoadActiveAsync();
     }
 
-    // Toolbar handlers
     private void OnBack(object sender, RoutedEventArgs e) => App.MainWindowInstance?.ShowGallery();
     private void OnUndo(object sender, RoutedEventArgs e) => Canvas.Undo();
     private void OnRedo(object sender, RoutedEventArgs e) => Canvas.Redo();
 
     private void OnToolChanged(object sender, SelectionChangedEventArgs e)
     {
-        var tag = ((ComboBoxItem)ToolPicker.SelectedItem)?.Tag?.ToString();
-        if (Enum.TryParse<ToolType>(tag, out var t)) Canvas.CurrentTool = t;
-        TextInput.Visibility = (t == ToolType.Text) ? Visibility.Visible : Visibility.Collapsed;
-        Canvas.TextInput = TextInput.Text;
+        if (ToolPicker.SelectedItem is ComboBoxItem item && item.Tag is string tag &&
+            Enum.TryParse<ToolType>(tag, out var t))
+        {
+            Canvas.CurrentTool = t;
+            TextInput.Visibility = (t == ToolType.Text) ? Visibility.Visible : Visibility.Collapsed;
+            Canvas.TextInput = TextInput.Text;
+        }
     }
-    private void OnColorChanged(ColorPicker sender, ColorChangedEventArgs args)
-        => Canvas.CurrentColorHex = ColorHelpers.ToHex(ColorHelpers.FromWinUI(args.NewColor));
+
+    private void OnColorPick(object sender, MouseButtonEventArgs e)
+    {
+        var dlg = new System.Windows.Forms.ColorDialog
+        {
+            AllowFullOpen = true,
+            FullOpen = true,
+        };
+        if (ColorRectangle.Fill is SolidColorBrush b)
+        {
+            dlg.Color = System.Drawing.Color.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
+        }
+        if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        {
+            var c = System.Windows.Media.Color.FromArgb(dlg.Color.A, dlg.Color.R, dlg.Color.G, dlg.Color.B);
+            ColorRectangle.Fill = new SolidColorBrush(c);
+            Canvas.CurrentColorHex = ColorHelpers.ToHex(c);
+        }
+    }
 
     private void OnSizeChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -79,28 +86,28 @@ public sealed partial class EditorPage : Page
         }
     }
 
-    // Render pipeline
     private Bitmap? RenderForExport()
     {
         if (_sourceBitmap == null) return null;
-        var watermark = WatermarkSettings.FromStore(SettingsStore.Shared);
-        return WatermarkRenderer.Render(_sourceBitmap, Canvas.Annotations, Canvas.CropRect, watermark);
+        var ws = WatermarkSettings.FromStore(SettingsStore.Shared);
+        return WatermarkRenderer.Render(_sourceBitmap, Canvas.Annotations, Canvas.CropRect, ws);
     }
 
     private async void OnPreview(object sender, RoutedEventArgs e)
     {
         if (_sourceBitmap == null) return;
         PreviewOverlay.Visibility = Visibility.Visible;
-        PreviewSpinner.IsActive = true;
+        PreviewSpinner.Visibility = Visibility.Visible;
         PreviewImage.Source = null;
         var rendered = await Task.Run(() => RenderForExport());
-        PreviewSpinner.IsActive = false;
+        PreviewSpinner.Visibility = Visibility.Collapsed;
         if (rendered != null)
         {
-            PreviewImage.Source = await BitmapHelpers.ToBitmapImageAsync(rendered);
+            PreviewImage.Source = BitmapHelpers.ToBitmapSource(rendered);
             rendered.Dispose();
         }
     }
+
     private void OnPreviewClose(object sender, RoutedEventArgs e) => PreviewOverlay.Visibility = Visibility.Collapsed;
 
     private async void OnCopy(object sender, RoutedEventArgs e)
@@ -110,24 +117,6 @@ public sealed partial class EditorPage : Page
         if (rendered == null) return;
         await ClipboardService.SetBitmapAsync(rendered);
         rendered.Dispose();
-    }
-
-    private async void OnShare(object sender, RoutedEventArgs e)
-    {
-        if (_sourceBitmap == null) return;
-        var rendered = await Task.Run(() => RenderForExport());
-        if (rendered == null) return;
-        var savedTemp = ImageExportService.SaveBitmap(rendered, isTemporary: true);
-        rendered.Dispose();
-        if (savedTemp == null) return;
-        try
-        {
-            var file = await Windows.Storage.StorageFile.GetFileFromPathAsync(savedTemp);
-            // Share via context menu — fallback that always works on unpackaged WinUI 3.
-            var launcher = new Windows.System.LauncherOptions { DisplayApplicationPicker = true };
-            await Windows.System.Launcher.LaunchFileAsync(file, launcher);
-        }
-        catch { }
     }
 
     private async void OnSave(object sender, RoutedEventArgs e)

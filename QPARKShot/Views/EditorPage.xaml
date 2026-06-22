@@ -1,9 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="QPARKShot.Views.EditorPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:QPARKShot.Views">
+    xmlns:local="clr-namespace:QPARKShot.Views"
+    xmlns:models="clr-namespace:QPARKShot.Models"
+    Background="Transparent"
+    Title="Editor">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="SidebarColumn" Width="124" />
@@ -19,82 +21,89 @@
             </Grid.RowDefinitions>
 
             <!-- Toolbar -->
-            <Grid Grid.Row="0" Padding="12,8" Background="{ThemeResource SubtleFillColorTransparentBrush}">
-                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                    <Button Click="OnBack" ToolTipService.ToolTip="Back to Gallery">
-                        <FontIcon Glyph="&#xE72B;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+            <Border Grid.Row="0" Background="#08FFFFFF" Padding="12,8">
+                <StackPanel Orientation="Horizontal">
+                    <Button Click="OnBack" Style="{StaticResource IconButton}" ToolTip="Back to Gallery">
+                        <TextBlock Text="◀" />
                     </Button>
 
-                    <ComboBox x:Name="ToolPicker" SelectionChanged="OnToolChanged" Width="160">
-                        <ComboBoxItem Content="Select / Crop" Tag="Select" />
-                        <ComboBoxItem Content="Freehand" Tag="Freehand" />
-                        <ComboBoxItem Content="Arrow" Tag="Arrow" />
-                        <ComboBoxItem Content="Rectangle" Tag="Rectangle" />
-                        <ComboBoxItem Content="Text" Tag="Text" />
+                    <Separator Margin="6,4" Width="1" Background="#22FFFFFF" />
+
+                    <ComboBox x:Name="ToolPicker" SelectionChanged="OnToolChanged" Width="150" Margin="6,0">
+                        <ComboBoxItem Content="✂ Select / Crop" Tag="Select" />
+                        <ComboBoxItem Content="✎ Freehand" Tag="Freehand" IsSelected="True" />
+                        <ComboBoxItem Content="↗ Arrow" Tag="Arrow" />
+                        <ComboBoxItem Content="▭ Rectangle" Tag="Rectangle" />
+                        <ComboBoxItem Content="T Text" Tag="Text" />
                     </ComboBox>
 
-                    <ColorPicker x:Name="StrokeColorPicker" ColorChanged="OnColorChanged"
-                                 IsAlphaEnabled="False" IsMoreButtonVisible="False"
-                                 ColorSpectrumShape="Ring"
-                                 MinWidth="0" MaxWidth="36" MaxHeight="36" />
+                    <Border Width="28" Height="28" Margin="6,0" CornerRadius="4"
+                            Background="{Binding ElementName=ColorRectangle, Path=Fill}"
+                            BorderBrush="#55FFFFFF" BorderThickness="1" Cursor="Hand"
+                            MouseLeftButtonUp="OnColorPick" ToolTip="Annotation color">
+                        <Rectangle x:Name="ColorRectangle" Fill="#FF3B30" />
+                    </Border>
 
-                    <ComboBox x:Name="SizePicker" SelectionChanged="OnSizeChanged" Width="100">
+                    <ComboBox x:Name="SizePicker" SelectionChanged="OnSizeChanged" Width="100" Margin="6,0">
                         <ComboBoxItem Content="Thin" Tag="2" />
                         <ComboBoxItem Content="Medium" Tag="4" IsSelected="True" />
                         <ComboBoxItem Content="Thick" Tag="8" />
                         <ComboBoxItem Content="Heavy" Tag="14" />
                     </ComboBox>
 
-                    <TextBox x:Name="TextInput" Text="Text Annotation" Width="140" Visibility="Collapsed" />
+                    <TextBox x:Name="TextInput" Text="Text Annotation" Width="140" Margin="6,0"
+                             Visibility="Collapsed" VerticalAlignment="Center" />
 
-                    <AppBarSeparator />
+                    <Separator Margin="6,4" Width="1" Background="#22FFFFFF" />
 
-                    <Button x:Name="UndoBtn" Click="OnUndo" ToolTipService.ToolTip="Undo">
-                        <FontIcon Glyph="&#xE7A7;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+                    <Button Click="OnUndo" Style="{StaticResource IconButton}" ToolTip="Undo">
+                        <TextBlock Text="↶" FontSize="14" />
                     </Button>
-                    <Button x:Name="RedoBtn" Click="OnRedo" ToolTipService.ToolTip="Redo">
-                        <FontIcon Glyph="&#xE7A6;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+                    <Button Click="OnRedo" Style="{StaticResource IconButton}" ToolTip="Redo">
+                        <TextBlock Text="↷" FontSize="14" />
                     </Button>
 
-                    <AppBarSeparator />
+                    <Separator Margin="6,4" Width="1" Background="#22FFFFFF" />
 
-                    <Button Click="OnPreview" ToolTipService.ToolTip="Preview with watermark">
-                        <FontIcon Glyph="&#xE7B3;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+                    <Button Click="OnPreview" Padding="10,4" Margin="4,0" ToolTip="Preview with watermark">
+                        <TextBlock Text="👁 Preview" />
                     </Button>
-                    <Button Click="OnCopy" ToolTipService.ToolTip="Copy to Clipboard">
-                        <FontIcon Glyph="&#xE8C8;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+                    <Button Click="OnCopy" Padding="10,4" Margin="4,0" ToolTip="Copy to clipboard">
+                        <TextBlock Text="📋 Copy" />
                     </Button>
-                    <Button Click="OnShare" ToolTipService.ToolTip="Share">
-                        <FontIcon Glyph="&#xE72D;" FontFamily="Segoe Fluent Icons" FontSize="14" />
-                    </Button>
-                    <Button Click="OnSave" Style="{StaticResource AccentButtonStyle}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xE74E;" FontFamily="Segoe Fluent Icons" FontSize="14" />
-                            <TextBlock Text="Save" />
-                        </StackPanel>
+                    <Button Click="OnSave" Padding="12,5" Margin="4,0"
+                            Background="{StaticResource QPARKAccent}" Foreground="White"
+                            BorderThickness="0">
+                        <TextBlock Text="💾 Save" FontWeight="SemiBold" />
                     </Button>
                 </StackPanel>
-            </Grid>
+            </Border>
 
             <local:DrawingCanvas x:Name="Canvas" Grid.Row="1" />
 
             <!-- Preview overlay -->
             <Grid x:Name="PreviewOverlay" Grid.RowSpan="2" Background="#CC000000" Visibility="Collapsed">
-                <Grid Padding="24">
+                <Grid Margin="24">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Top">
-                        <TextBlock Text="Preview" Foreground="White" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-                        <ProgressRing x:Name="PreviewSpinner" IsActive="True" Width="20" Height="20" />
-                        <Button Click="OnPreviewClose" HorizontalAlignment="Right">
-                            <FontIcon Glyph="&#xE711;" FontFamily="Segoe Fluent Icons" FontSize="14" />
+                    <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock Text="Preview" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="White" VerticalAlignment="Center" />
+                        <ProgressBar x:Name="PreviewSpinner" IsIndeterminate="True"
+                                     Width="100" Height="4" Margin="10,0" VerticalAlignment="Center" />
+                        <Button DockPanel.Dock="Right" Click="OnPreviewClose"
+                                Background="Transparent" BorderThickness="0" Foreground="White"
+                                HorizontalAlignment="Right" Padding="10,4">
+                            <TextBlock Text="✕ Close" />
                         </Button>
-                    </StackPanel>
-                    <ScrollViewer Grid.Row="1" ZoomMode="Enabled" MinZoomFactor="0.25" MaxZoomFactor="4">
-                        <Image x:Name="PreviewImage" Stretch="Uniform" />
-                    </ScrollViewer>
+                    </DockPanel>
+                    <Border Grid.Row="1" Background="#1A1A1A" CornerRadius="6">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                            <Image x:Name="PreviewImage" Stretch="Uniform" />
+                        </ScrollViewer>
+                    </Border>
                 </Grid>
             </Grid>
         </Grid>

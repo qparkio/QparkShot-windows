@@ -1,52 +1,52 @@
 using System;
+using System.Drawing;
 using System.Threading.Tasks;
-using Rectangle = System.Drawing.Rectangle;
-using Microsoft.UI;
-using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Shapes;
-using Windows.Foundation;
-using Windows.System;
-using WinRT.Interop;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using WpfPoint = System.Windows.Point;
+using WpfRectangle = System.Windows.Shapes.Rectangle;
+using GdiRectangle = System.Drawing.Rectangle;
 
 namespace QPARKShot.Services;
 
 /// <summary>
-/// Opens a full-screen transparent overlay window, lets the user drag a rectangle,
-/// and returns the selected region in screen pixel space. Returns null on cancel (ESC).
+/// Opens a borderless top-most window spanning the entire virtual desktop,
+/// lets the user drag a selection rectangle, returns the region in screen pixels.
+/// Returns null on cancel (ESC, click without drag).
 /// </summary>
 public static class SelectionOverlayController
 {
-    public static Task<Rectangle?> SelectRegionAsync()
+    public static Task<GdiRectangle?> SelectRegionAsync()
     {
-        var tcs = new TaskCompletionSource<Rectangle?>();
+        var tcs = new TaskCompletionSource<GdiRectangle?>();
+        var bounds = ScreenInfo.VirtualScreenBounds();
+
         var window = new Window
         {
+            WindowStyle = WindowStyle.None,
+            ResizeMode = ResizeMode.NoResize,
+            AllowsTransparency = true,
+            Background = new SolidColorBrush(Color.FromArgb(110, 0, 0, 0)),
+            Topmost = true,
+            ShowInTaskbar = false,
             Title = "QPARK Shot — Select Region",
+            Left = bounds.X,
+            Top = bounds.Y,
+            Width = bounds.Width,
+            Height = bounds.Height,
+            Cursor = Cursors.Cross,
         };
 
-        // Borderless, topmost, full virtual screen.
-        var bounds = ScreenInfo.VirtualScreenBounds();
-        var appWindow = window.AppWindow;
-        var overlapped = appWindow.Presenter as OverlappedPresenter;
-        overlapped?.SetBorderAndTitleBar(false, false);
-        overlapped?.Maximize();
-        appWindow.MoveAndResize(new Windows.Graphics.RectInt32(bounds.X, bounds.Y, bounds.Width, bounds.Height));
-        appWindow.IsShownInSwitchers = false;
+        var canvas = new Canvas { Background = Brushes.Transparent };
+        window.Content = canvas;
 
-        // Translucent dark canvas + selection rectangle.
-        var canvas = new Canvas
+        var rect = new WpfRectangle
         {
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(110, 0, 0, 0)),
-        };
-        var rect = new Microsoft.UI.Xaml.Shapes.Rectangle
-        {
-            Stroke = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 122, 255)),
+            Stroke = new SolidColorBrush(Color.FromArgb(255, 0, 122, 255)),
             StrokeThickness = 1.5,
-            Fill = new SolidColorBrush(Windows.UI.Color.FromArgb(40, 0, 122, 255)),
+            Fill = new SolidColorBrush(Color.FromArgb(40, 0, 122, 255)),
             Width = 0,
             Height = 0,
             IsHitTestVisible = false,
@@ -58,7 +58,7 @@ public static class SelectionOverlayController
         var hint = new TextBlock
         {
             Text = "Drag to select • ESC to cancel",
-            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(220, 255, 255, 255)),
+            Foreground = new SolidColorBrush(Color.FromArgb(220, 255, 255, 255)),
             FontSize = 13,
             IsHitTestVisible = false,
         };
@@ -66,24 +66,23 @@ public static class SelectionOverlayController
         Canvas.SetTop(hint, 24);
         canvas.Children.Add(hint);
 
-        Point start = new(0, 0);
+        WpfPoint start = new(0, 0);
         bool dragging = false;
 
-        canvas.PointerPressed += (s, e) =>
+        canvas.MouseLeftButtonDown += (s, e) =>
         {
-            var p = e.GetCurrentPoint(canvas).Position;
-            start = p;
+            start = e.GetPosition(canvas);
             dragging = true;
-            Canvas.SetLeft(rect, p.X);
-            Canvas.SetTop(rect, p.Y);
+            Canvas.SetLeft(rect, start.X);
+            Canvas.SetTop(rect, start.Y);
             rect.Width = 0;
             rect.Height = 0;
-            canvas.CapturePointer(e.Pointer);
+            canvas.CaptureMouse();
         };
-        canvas.PointerMoved += (s, e) =>
+        canvas.MouseMove += (s, e) =>
         {
             if (!dragging) return;
-            var p = e.GetCurrentPoint(canvas).Position;
+            var p = e.GetPosition(canvas);
             double x = Math.Min(start.X, p.X);
             double y = Math.Min(start.Y, p.Y);
             double w = Math.Abs(p.X - start.X);
@@ -93,15 +92,16 @@ public static class SelectionOverlayController
             rect.Width = w;
             rect.Height = h;
         };
-        canvas.PointerReleased += (s, e) =>
+        canvas.MouseLeftButtonUp += (s, e) =>
         {
             if (!dragging) return;
             dragging = false;
-            canvas.ReleasePointerCapture(e.Pointer);
-            var x = Canvas.GetLeft(rect);
-            var y = Canvas.GetTop(rect);
-            var w = rect.Width;
-            var h = rect.Height;
+            canvas.ReleaseMouseCapture();
+
+            double x = Canvas.GetLeft(rect);
+            double y = Canvas.GetTop(rect);
+            double w = rect.Width;
+            double h = rect.Height;
 
             if (w < 4 || h < 4)
             {
@@ -109,41 +109,35 @@ public static class SelectionOverlayController
             }
             else
             {
-                // Convert from window-local DIPs to screen pixels. Window is full virtual screen,
-                // so window-local already equals screen pixels (assuming PerMonitorV2 DPI).
-                var screenRect = new Rectangle(
-                    bounds.X + (int)Math.Round(x),
-                    bounds.Y + (int)Math.Round(y),
-                    (int)Math.Round(w),
-                    (int)Math.Round(h));
-                tcs.TrySetResult(screenRect);
+                // Convert from window-local DIPs to screen pixels using the window DPI.
+                var dpi = VisualTreeHelper.GetDpi(window);
+                int sx = bounds.X + (int)Math.Round(x * dpi.DpiScaleX);
+                int sy = bounds.Y + (int)Math.Round(y * dpi.DpiScaleY);
+                int sw = (int)Math.Round(w * dpi.DpiScaleX);
+                int sh = (int)Math.Round(h * dpi.DpiScaleY);
+                tcs.TrySetResult(new GdiRectangle(sx, sy, sw, sh));
             }
             window.Close();
         };
 
-        // ESC cancels.
-        canvas.KeyDown += (s, e) =>
+        window.KeyDown += (s, e) =>
         {
-            if (e.Key == VirtualKey.Escape)
+            if (e.Key == Key.Escape)
             {
                 tcs.TrySetResult(null);
                 window.Close();
-                e.Handled = true;
             }
         };
 
-        canvas.IsTabStop = true;
-        window.Content = canvas;
-        window.Activated += (s, e) =>
-        {
-            canvas.Focus(FocusState.Programmatic);
-        };
         window.Closed += (s, e) =>
         {
             if (!tcs.Task.IsCompleted) tcs.TrySetResult(null);
         };
 
+        window.Show();
         window.Activate();
+        window.Focus();
+
         return tcs.Task;
     }
 }
