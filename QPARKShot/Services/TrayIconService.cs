@@ -1,8 +1,10 @@
 using System;
+using System.IO;
 using H.NotifyIcon;
 using H.NotifyIcon.Core;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using QPARKShot.Helpers;
 
 namespace QPARKShot.Services;
 
@@ -30,9 +32,26 @@ public sealed class TrayIconService
         _icon = new TaskbarIcon
         {
             ToolTipText = "QPARK Shot",
-            IconSource = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(
-                new Uri("ms-appx:///Assets/AppIcon.ico")),
         };
+
+        // Unpackaged WinUI 3 apps can't resolve ms-appx:// URIs; load from disk.
+        try
+        {
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico");
+            if (File.Exists(iconPath))
+            {
+                _icon.IconSource = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(
+                    new Uri(iconPath, UriKind.Absolute));
+            }
+            else
+            {
+                Logger.Log($"TrayIcon: icon NOT FOUND at {iconPath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogException("TrayIcon icon load", ex);
+        }
 
         var menu = new MenuFlyout();
 
@@ -76,7 +95,16 @@ public sealed class TrayIconService
 
         _icon.ContextFlyout = menu;
         _icon.LeftClickCommand = new RelayCommandLite(() => OnRequestGallery?.Invoke());
-        _icon.ForceCreate();
+        try
+        {
+            _icon.ForceCreate();
+            Logger.Log("TrayIcon: ForceCreate ok");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogException("TrayIcon.ForceCreate", ex);
+            // App should still run without tray.
+        }
     }
 
     public void Stop()
