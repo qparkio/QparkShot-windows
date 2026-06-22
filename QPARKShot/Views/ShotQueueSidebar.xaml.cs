@@ -74,7 +74,7 @@ public partial class ShotQueueSidebar : UserControl
         Grid.SetRow(thumbBorder, 0);
 
         var thumbGrid = new Grid();
-        var thumb = new Image { Stretch = Stretch.UniformToFill };
+        var thumb = new System.Windows.Controls.Image { Stretch = Stretch.UniformToFill };
         thumbGrid.Children.Add(thumb);
 
         var hoverActions = new StackPanel
@@ -153,7 +153,7 @@ public partial class ShotQueueSidebar : UserControl
         return root;
     }
 
-    private async Task LoadThumbAsync(Image target, string path)
+    private async Task LoadThumbAsync(System.Windows.Controls.Image target, string path)
     {
         await Task.Run(() =>
         {
