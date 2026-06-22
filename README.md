@@ -1,133 +1,176 @@
-# QPARK Shot — Windows
+<p align="center">
+  <img src="QPARKShot/Assets/Logo.png" width="96" height="96" alt="QPARK Shot app icon">
+</p>
 
-Native Windows port of [QPARK Shot](../qpark-shot/) (macOS app) — built on **WPF / .NET 8**. Feature-parity with the macOS 1.1.0 release: tray-icon capture pipeline, in-memory shot queue, annotation editor, watermarks, drag-out, settings persistence, hotkeys.
+<h1 align="center">QPARK Shot for Windows</h1>
 
-> The first iteration of this project used WinUI 3 + Windows App SDK 1.5. WinUI 3 in *unpackaged self-contained* mode turned out to be fragile across machines (bootstrap auto-init, XBF asset deployment, MRT/PRI resource loading). We rewrote the UI on WPF (.NET 8) — same C# language, services and models reused, all the WinUI-specific pain points gone. WPF is mature (in production since 2006), self-contained deployment Just Works.
+<p align="center">
+  Native Windows screenshot capture, annotation, watermarking, and local gallery app built with C#, WPF, and .NET 8.
+</p>
+
+<p align="center">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-10%201809%2B%20%2F%2011-0078D4">
+  <img alt=".NET" src="https://img.shields.io/badge/.NET-8-512BD4">
+  <img alt="WPF" src="https://img.shields.io/badge/WPF-Native-blueviolet">
+  <img alt="Version" src="https://img.shields.io/badge/version-1.1.0-blue">
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
+</p>
+
+## Overview
+
+QPARK Shot is a local-first screenshot utility for Windows. It runs from the system tray, captures selected areas or the full screen, opens captures in an editor, and lets you annotate, crop, watermark, copy, share, or save the final PNG.
+
+The app is intentionally simple from an infrastructure point of view: no analytics SDKs, no ad networks, no backend services, and no third-party runtime dependencies.
+
+## Features
+
+### Capture
+
+- Capture a selected screen area with a built-in transparent overlay.
+- Capture the full screen from the tray-icon menu or an optional global hotkey.
+- Add a capture delay of 3, 5, or 10 seconds.
+- Configure separate hotkeys for selection capture and full-screen capture.
+
+### Edit
+
+- Draw freehand lines, arrows, rectangles, and text annotations.
+- Crop screenshots before export.
+- Undo and redo annotation changes.
+- Preview the exported image before saving.
+- Copy the final image directly to the clipboard.
+- Share the final image through the native Windows "Open with…" dialog.
+
+### Watermark
+
+- Add a text watermark with configurable color, opacity, size, and position.
+- Add a logo watermark from a user-selected image file.
+- Use a single-position watermark or a tiled diagonal layout.
+- Preview watermark output live in Preferences before saving.
+
+### Gallery and Storage
+
+- Save PNG files to `%USERPROFILE%\Pictures\QPARK Shot` by default.
+- Choose a custom save folder in Preferences.
+- Browse recent screenshots in a local gallery.
+- Open, copy, share, drag, or delete saved screenshots from the gallery.
+- Keep current-session captures in an optional editor buffer sidebar.
+- Automatically clean temporary files based on local cleanup preferences.
+
+### Appearance
+
+- Light, Dark, and System themes that follow the current Windows mode.
+- Mica backdrop and rounded corners on Windows 11 22H2 or later.
+- Close-to-tray behaviour: closing the window minimizes to the tray; real quit via the tray-icon menu.
+- Single-instance enforcement: a second launch focuses the existing one instead of opening a duplicate.
 
 ## Requirements
 
-- **End users**: Windows 10 1809+ or Windows 11. No .NET runtime install needed — the installer ships everything.
-- **Developers**: Visual Studio 2022 (Windows) or `dotnet 8 SDK` + PowerShell 7. To build the installer locally: `choco install nsis`.
+- Windows 10 version 1809 (build 17763) or later, x64.
+- .NET 8 SDK (only for building from source — the installer ships a self-contained runtime).
+- Visual Studio 2022 (any edition) or the `dotnet` CLI in PowerShell 7.
+- NSIS 3.x (only to rebuild the installer locally — `choco install nsis`).
 
-## Architecture
+## Install
 
-```
-QPARKShot/
-├── App.xaml(.cs)              # Application entry, tray + hotkeys wiring
-├── MainWindow.xaml(.cs)       # Frame navigation host + Mica backdrop (Win11)
-├── Views/
-│   ├── GalleryPage            # Grid of saved screenshots
-│   ├── EditorPage             # Toolbar + canvas + buffer sidebar + preview overlay
-│   ├── SettingsPage           # 6 tabs (Appearance/Hotkeys/Watermark/Storage/Buffer/About)
-│   ├── DrawingCanvas          # Freehand / Arrow / Rectangle / Text / Crop
-│   ├── ShotQueueSidebar       # Vertical carousel of in-memory buffer
-│   ├── ScreenshotCard         # Card item in the gallery (drag-out, context menu)
-│   └── WatermarkPreview       # Live preview of watermark settings
-├── Services/
-│   ├── SettingsStore          # JSON persistence in %APPDATA%\QPARK Shot\settings.json
-│   ├── ShotQueueStore         # In-memory queue (ObservableCollection)
-│   ├── CaptureService         # Selection / Full-screen / Delay capture pipeline
-│   ├── SelectionOverlayController  # Borderless transparent overlay for region select
-│   ├── HotkeyService          # Win32 RegisterHotKey + WM_HOTKEY via HwndSource
-│   ├── TrayIconService        # WinForms NotifyIcon (rock-solid across Win10+11)
-│   ├── WatermarkRenderer      # Pure GDI+ render — text + logo, single / tiled
-│   ├── ImageExportService     # PNG save (Pictures\QPARK Shot or custom folder)
-│   ├── ClipboardService       # WPF Clipboard.SetImage
-│   └── CleanupService         # Retention policy (delete after N hours)
-├── Models/                    # AppSettings, ShotQueueItem, Annotation, WatermarkSettings
-└── Helpers/                   # Bitmap / Color helpers, Win32 P/Invoke, Logger
+The easiest way is the prebuilt installer:
+
+1. Download `QPARKShot-Setup-1.1.0.exe` from the [latest release](https://github.com/qparkio/QparkShot-windows/releases/latest).
+2. Run it. The installer is per-user and does not require administrator rights.
+3. The app is installed into `%LOCALAPPDATA%\Programs\QPARK Shot\` with Start Menu and Desktop shortcuts.
+
+To uninstall, use **Settings → Apps → Installed apps → QPARK Shot → Uninstall**.
+
+## Build and Run
+
+Open the solution in Visual Studio 2022:
+
+```text
+QPARKShot.sln
 ```
 
-## Building locally
+Select the **QPARKShot** project and press **F5**.
+
+Command-line release build (self-contained, win-x64):
 
 ```powershell
-# Restore + build + publish (self-contained, no external runtime needed)
 dotnet restore QPARKShot.sln
 dotnet publish QPARKShot\QPARKShot.csproj `
   -c Release -r win-x64 --self-contained true `
   -o build\Release
-
-# Run from the publish folder
-.\build\Release\QPARKShot.exe
 ```
 
-### Installer (NSIS)
+Generated build output is written under `./build`, which is ignored by Git.
+
+### Build the installer
 
 ```powershell
-# One-time NSIS install:
 choco install nsis -y
-
-# Build the installer:
 mkdir build\Installer
 & 'C:\Program Files (x86)\NSIS\makensis.exe' /V2 scripts\installer.nsi
 # → build\Installer\QPARKShot-Setup-1.1.0.exe
 ```
 
-Installs to `%LOCALAPPDATA%\Programs\QPARK Shot\` (per-user, no admin), with Start Menu + Desktop shortcuts, and uninstaller entry in Add/Remove Programs.
+The GitHub Actions workflow `.github/workflows/build-windows.yml` automates both steps on every push and uploads the installer as a build artifact.
 
-## CI
+## Permissions
 
-GitHub Actions workflow `.github/workflows/build-windows.yml` runs on every push to `main` on `windows-latest`:
+QPARK Shot does not require administrator rights or any special permissions on Windows. Screen capture uses the standard `BitBlt` GDI API, which works for any process running in the current user session.
 
-1. Restore + publish self-contained x64 build
-2. Install NSIS via Chocolatey
-3. Compile the installer
-4. Upload two artifacts:
-   - `QPARKShot-Setup` — `.exe` installer
-   - `QPARKShot-Windows-Portable` — unzipped publish folder
+Global hotkeys are registered with `RegisterHotKey` (Win32) and may silently fail to register if the chosen combination is already claimed by another application (for example, Windows Snip & Sketch on `Win+Shift+S`). If this happens, change the shortcut in **Preferences → Hotkeys**.
 
-## Settings file location
+## Privacy
 
-`%APPDATA%\QPARK Shot\settings.json` — same JSON schema as the macOS version (under `UserDefaults`). You can copy this file between macOS and Windows to sync settings.
+Screenshots stay on the user's PC. QPARK Shot does not collect personal data, does not include analytics, and does not transmit captured screen content.
 
-## Debug log
+Saved screenshots are written locally to `%USERPROFILE%\Pictures\QPARK Shot` unless the user chooses another folder. Temporary captures are stored in `%TEMP%` and can be cleared by the app's cleanup preferences.
 
-If the app crashes silently or behaves unexpectedly, check **`%TEMP%\qparkshot-debug.log`** — every startup step and exception is logged there.
+Application settings are persisted in `%APPDATA%\QPARK Shot\settings.json`. The schema is identical to the macOS version, so the file is portable between OSes.
 
-## Feature parity with macOS 1.1.0
+## Diagnostics
 
-| Feature | Status |
-|---------|--------|
-| Tray icon with capture / preferences / quit menu | ✅ |
-| Capture: selection, full screen, timed delay (3/5/10 s) | ✅ |
-| Global hotkeys (selection + full-screen, independently configurable) | ✅ |
-| In-memory shot queue + sidebar carousel | ✅ |
-| Per-item preview-with-watermark, delete from buffer, drag-out | ✅ |
-| Editor: freehand, arrow, rectangle, text, undo / redo | ✅ |
-| Crop tool | ✅ |
-| Watermark — text + logo, single position (5 corners) and tiled (aligned/brick/random with -30° rotation) | ✅ |
-| Live watermark preview card in settings | ✅ |
-| Mica backdrop (Win11 22H2+), dark theme | ✅ |
-| Settings tabs: Appearance / Hotkeys / Watermark / Storage / Buffer / About | ✅ |
-| Cleanup policy (never / after N hours) | ✅ |
-| Drag-out from gallery and from buffer carousel | ✅ |
-| Copy to clipboard, save to disk | ✅ |
-| Settings persistence in JSON (`%APPDATA%\QPARK Shot\`) | ✅ |
+If the app misbehaves, look at the debug log:
 
-## Replaced files (vs prior WinUI 3 iteration)
+```text
+%TEMP%\qparkshot-debug.log
+```
 
-For maintainers: the WPF rewrite touches the UI layer and a few service adapters. The services / models / helpers below were either kept or only had types swapped (e.g., `Windows.Foundation.Point` → `System.Windows.Point`):
+Every startup phase and every caught exception is recorded there. This is the single most useful artefact to attach to a bug report.
 
-**Replaced entirely (WPF XAML + code-behind):**
-- `App.xaml(.cs)`, `MainWindow.xaml(.cs)`
-- All files under `Views/`
+## Project Structure
 
-**Rewritten (WinUI-specific APIs swapped for WPF):**
-- `Services/TrayIconService.cs` (H.NotifyIcon → `System.Windows.Forms.NotifyIcon`)
-- `Services/SelectionOverlayController.cs` (WinUI Window → WPF Window)
-- `Services/HotkeyService.cs` (message-only HWND → WPF `HwndSource`)
-- `Services/ClipboardService.cs` (DataPackage → `System.Windows.Clipboard.SetImage`)
-- `Helpers/BitmapHelpers.cs` (`BitmapImage` via async stream → `ToBitmapSource` sync)
-- `Helpers/ColorHelpers.cs` (Windows.UI.Color → System.Windows.Media.Color)
-- `Models/Annotation.cs` (Windows.Foundation.Point/Rect → System.Windows.Point/Rect)
+```text
+QPARKShot.sln                Solution file
+QPARKShot/                   Application source
+  App.xaml(.cs)              Entry point, tray, hotkeys, theme system
+  MainWindow.xaml(.cs)       Frame-navigation host with Mica backdrop
+  Views/                     WPF Pages and UserControls
+  Services/                  Capture, hotkeys, tray, watermark, persistence
+  Models/                    POCO mirrors of the macOS settings schema
+  Helpers/                   Bitmap, color, P/Invoke utilities
+  Assets/                    App icon and logo
+scripts/                     NSIS installer script
+.github/workflows/           CI build pipeline
+```
 
-**Unchanged or minimal edits:**
-- `Services/SettingsStore.cs` — JSON persistence singleton
-- `Services/ShotQueueStore.cs` — in-memory queue
-- `Services/WatermarkRenderer.cs` — pure GDI+ rendering (framework-agnostic)
-- `Services/CaptureService.cs` — capture pipeline
-- `Services/ImageExportService.cs` — PNG save
-- `Services/CleanupService.cs` — retention sweep
-- `Models/AppSettings.cs`, `ShotQueueItem.cs`, `WatermarkSettings.cs` — POCOs
-- `Helpers/Logger.cs`, `NativeMethods.cs`
-- `scripts/installer.nsi` — NSIS spec
+The public repository intentionally keeps the source tree small. Local helper scripts, generated build output, packaged installers, signing material, and environment files are excluded by `.gitignore`.
+
+## Before Publishing
+
+Before pushing or tagging a public release, verify the repository contains only source files and public assets:
+
+```powershell
+git status --short
+git check-ignore -v build scripts/build-output "build/Installer" || true
+```
+
+For distribution outside a tightly trusted group, sign the installer with a code-signing certificate (Microsoft SmartScreen warns on the first launch of any unsigned executable until enough users run it).
+
+## License
+
+QPARK Shot for Windows is open source under the [MIT License](LICENSE).
+
+Copyright (c) 2026 QPARK.
+
+## Contact
+
+Questions, bug reports, and security concerns: [work@qpark.io](mailto:work@qpark.io)
