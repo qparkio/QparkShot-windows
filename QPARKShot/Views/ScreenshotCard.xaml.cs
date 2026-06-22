@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using QPARKShot.Helpers;
 using QPARKShot.Services;
+using Point = System.Windows.Point;
 
 namespace QPARKShot.Views;
 

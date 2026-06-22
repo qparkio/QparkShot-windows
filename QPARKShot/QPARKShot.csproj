@@ -30,6 +30,13 @@
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
   </ItemGroup>
 
+  <!-- Remove WinForms implicit usings — they collide with WPF (Application,
+       UserControl, MouseEventArgs) everywhere. We import them explicitly
+       only in TrayIconService and SettingsPage. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
+
   <ItemGroup>
     <Content Include="Assets\AppIcon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

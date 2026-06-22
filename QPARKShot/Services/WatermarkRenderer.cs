@@ -6,7 +6,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using QPARKShot.Helpers;
 using QPARKShot.Models;
-using Windows.Foundation;
+using Rect = System.Windows.Rect;
 
 namespace QPARKShot.Services;
 
