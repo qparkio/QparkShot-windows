@@ -33,16 +33,12 @@ jobs:
         continue-on-error: true
         run: pwsh ./scripts/build_msi.ps1
 
-      - name: Zip Release output
-        run: |
-          cd build/Release
-          Compress-Archive -Path * -DestinationPath ../QPARKShot-1.1.0-win-x64.zip -Force
-
-      - name: Upload Release zip
+      - name: Upload Release build (unpackaged)
         uses: actions/upload-artifact@v4
         with:
           name: QPARKShot-Windows-Release
-          path: build/QPARKShot-1.1.0-win-x64.zip
+          path: build/Release/**
+          if-no-files-found: error
 
       - name: Upload MSI (if built)
         if: hashFiles('build/Msi/*.msi') != ''
