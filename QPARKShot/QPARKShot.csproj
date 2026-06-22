@@ -30,11 +30,12 @@
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
   </ItemGroup>
 
-  <!-- Remove WinForms implicit usings — they collide with WPF (Application,
-       UserControl, MouseEventArgs) everywhere. We import them explicitly
-       only in TrayIconService and SettingsPage. -->
+  <!-- Remove implicit WinForms + System.Drawing global usings — they collide
+       with WPF (Application, UserControl, Color, Brush, Image, Point, etc.)
+       all over the place. Each file that needs them imports explicitly. -->
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -8,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using QPARKShot.Helpers;
 using QPARKShot.Models;
+using Bitmap = System.Drawing.Bitmap;
 using WpfPoint = System.Windows.Point;
 using WpfRect = System.Windows.Rect;
 using WpfRectangle = System.Windows.Shapes.Rectangle;

@@ -1,5 +1,4 @@
 using System;
-using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +6,10 @@ using System.Windows.Controls;
 using QPARKShot.Helpers;
 using QPARKShot.Models;
 using QPARKShot.Services;
+using Bitmap = System.Drawing.Bitmap;
+using GdiColor = System.Drawing.Color;
+using GdiPoint = System.Drawing.Point;
+using GdiGraphics = System.Drawing.Graphics;
 
 namespace QPARKShot.Views;
 
@@ -35,12 +38,12 @@ public partial class WatermarkPreview : UserControl
             // Render watermark on a mock blue gradient ~680×440 px.
             const int W = 680, H = 440;
             using var mock = new Bitmap(W, H);
-            using (var g = Graphics.FromImage(mock))
+            using (var g = GdiGraphics.FromImage(mock))
             {
                 using var grad = new LinearGradientBrush(
-                    new System.Drawing.Point(0, 0), new System.Drawing.Point(W, H),
-                    System.Drawing.Color.FromArgb(0x3B, 0x6F, 0xE3),
-                    System.Drawing.Color.FromArgb(0x4F, 0x46, 0x90));
+                    new GdiPoint(0, 0), new GdiPoint(W, H),
+                    GdiColor.FromArgb(0x3B, 0x6F, 0xE3),
+                    GdiColor.FromArgb(0x4F, 0x46, 0x90));
                 g.FillRectangle(grad, 0, 0, W, H);
             }
             if (token.IsCancellationRequested) return;

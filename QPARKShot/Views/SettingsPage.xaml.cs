@@ -10,6 +10,9 @@ using System.Windows.Navigation;
 using Microsoft.Win32;
 using QPARKShot.Models;
 using QPARKShot.Services;
+using WinFormsColorDialog = System.Windows.Forms.ColorDialog;
+using WinFormsFolderDialog = System.Windows.Forms.FolderBrowserDialog;
+using WinFormsDialogResult = System.Windows.Forms.DialogResult;
 
 namespace QPARKShot.Views;
 
