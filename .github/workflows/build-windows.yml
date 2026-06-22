@@ -25,6 +25,13 @@ jobs:
       - name: Build (Release)
         run: pwsh ./scripts/build_release.ps1
 
+      - name: List build output (debug)
+        run: |
+          Write-Host "==> Repo root:"
+          Get-Location
+          Write-Host "==> build/:"
+          if (Test-Path build) { Get-ChildItem -Recurse build | Select-Object FullName, Length | Format-Table -AutoSize | Out-String -Width 200 } else { Write-Host "MISSING" }
+
       - name: Install WiX v4 (v7 requires OSMF EULA acceptance)
         continue-on-error: true
         run: dotnet tool install --global wix --version 4.0.5
