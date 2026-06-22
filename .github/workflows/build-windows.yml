@@ -26,15 +26,27 @@ jobs:
         run: pwsh ./scripts/build_release.ps1
 
       - name: Install WiX v4 (v7 requires OSMF EULA acceptance)
+        continue-on-error: true
         run: dotnet tool install --global wix --version 4.0.5
 
       - name: Build MSI
+        continue-on-error: true
         run: pwsh ./scripts/build_msi.ps1
 
-      - name: Upload artifacts
+      - name: Zip Release output
+        run: |
+          cd build/Release
+          Compress-Archive -Path * -DestinationPath ../QPARKShot-1.1.0-win-x64.zip -Force
+
+      - name: Upload Release zip
         uses: actions/upload-artifact@v4
         with:
-          name: QPARKShot-Windows
-          path: |
-            build/Release/**
-            build/Msi/*.msi
+          name: QPARKShot-Windows-Release
+          path: build/QPARKShot-1.1.0-win-x64.zip
+
+      - name: Upload MSI (if built)
+        if: hashFiles('build/Msi/*.msi') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: QPARKShot-Windows-MSI
+          path: build/Msi/*.msi
