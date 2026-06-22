@@ -1,6 +1,6 @@
 using System;
-using System.Drawing;
 using System.Threading.Tasks;
+using Rectangle = System.Drawing.Rectangle;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;

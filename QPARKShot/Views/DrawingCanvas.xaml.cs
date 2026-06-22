@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -11,6 +10,7 @@ using QPARKShot.Helpers;
 using QPARKShot.Models;
 using Windows.Foundation;
 using Windows.UI;
+using Bitmap = System.Drawing.Bitmap;
 
 namespace QPARKShot.Views;
 

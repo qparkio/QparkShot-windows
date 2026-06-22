@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Specialized;
-using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
