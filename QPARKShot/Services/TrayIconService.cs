@@ -30,11 +30,8 @@ public sealed class TrayIconService
         _icon = new TaskbarIcon
         {
             ToolTipText = "QPARK Shot",
-            IconSource = new Microsoft.UI.Xaml.Controls.BitmapIconSource
-            {
-                UriSource = new Uri("ms-appx:///Assets/AppIcon.ico"),
-                ShowAsMonochrome = false,
-            },
+            IconSource = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(
+                new Uri("ms-appx:///Assets/AppIcon.ico")),
         };
 
         var menu = new MenuFlyout();

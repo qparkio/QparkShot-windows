@@ -11,6 +11,7 @@ using QPARKShot.Models;
 using Windows.Foundation;
 using Windows.UI;
 using Bitmap = System.Drawing.Bitmap;
+using Colors = Microsoft.UI.Colors;
 
 namespace QPARKShot.Views;
 
