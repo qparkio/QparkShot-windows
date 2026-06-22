@@ -25,18 +25,28 @@ public partial class ScreenshotCard : UserControl
 
     private async Task LoadAsync()
     {
-        _path = DataContext as string;
-        if (string.IsNullOrEmpty(_path) || !File.Exists(_path)) return;
-
-        NameText.Text = Path.GetFileName(_path);
-
-        await Task.Run(() =>
+        try
         {
-            using var thumb = BitmapHelpers.Thumbnail(_path, 240);
-            if (thumb == null) return;
-            var src = BitmapHelpers.ToBitmapSource(thumb);
-            Dispatcher.Invoke(() => Thumb.Source = src);
-        });
+            _path = DataContext as string;
+            if (string.IsNullOrEmpty(_path) || !File.Exists(_path)) return;
+
+            NameText.Text = Path.GetFileName(_path);
+
+            await Task.Run(() =>
+            {
+                using var thumb = BitmapHelpers.Thumbnail(_path, 240);
+                if (thumb == null) return;
+                var src = BitmapHelpers.ToBitmapSource(thumb);
+                Dispatcher.Invoke(() =>
+                {
+                    try { Thumb.Source = src; } catch { }
+                });
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogException("ScreenshotCard.LoadAsync", ex);
+        }
     }
 
     private void OnHoverEnter(object sender, MouseEventArgs e) => HoverOverlay.Visibility = Visibility.Visible;

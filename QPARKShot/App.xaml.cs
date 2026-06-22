@@ -98,7 +98,11 @@ public partial class App : Application
             TrayIconService.Shared.OnRequestGallery = () => MainWindowInstance?.Dispatcher.Invoke(() => MainWindowInstance.ShowGallery());
             TrayIconService.Shared.OnRequestSettings = () => MainWindowInstance?.Dispatcher.Invoke(() => MainWindowInstance.ShowSettings());
             TrayIconService.Shared.OnRequestAbout = () => MainWindowInstance?.Dispatcher.Invoke(() => MainWindowInstance.ShowAbout());
-            TrayIconService.Shared.OnRequestQuit = () => Dispatcher.Invoke(() => Shutdown());
+            TrayIconService.Shared.OnRequestQuit = () => Dispatcher.Invoke(() =>
+            {
+                if (MainWindowInstance != null) MainWindowInstance.IsQuitting = true;
+                Shutdown();
+            });
             TrayIconService.Shared.Start();
             Logger.Log("OnStartup: tray started");
         }

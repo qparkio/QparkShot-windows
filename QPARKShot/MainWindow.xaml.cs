@@ -11,6 +11,7 @@ namespace QPARKShot;
 public partial class MainWindow : Window
 {
     public IntPtr Hwnd { get; private set; }
+    public bool IsQuitting { get; set; }
 
     public MainWindow()
     {
@@ -116,4 +117,17 @@ public partial class MainWindow : Window
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        if (!IsQuitting)
+        {
+            e.Cancel = true;
+            Hide();
+        }
+        else
+        {
+            base.OnClosing(e);
+        }
+    }
 }

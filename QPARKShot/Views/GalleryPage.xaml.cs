@@ -27,34 +27,48 @@ public partial class GalleryPage : Page
 
     public async Task LoadRecentAsync()
     {
-        var customDir = SettingsStore.Shared.Settings.Cleanup.SaveDirectory;
-        var pics = !string.IsNullOrWhiteSpace(customDir) && Directory.Exists(customDir)
-            ? customDir
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "QPARK Shot");
-        var temp = Path.Combine(Path.GetTempPath(), "QPARK Shot");
-
-        var paths = await Task.Run(() =>
+        try
         {
-            var list = new List<(string Path, DateTime When)>();
-            foreach (var dir in new[] { pics, temp })
-            {
-                if (!Directory.Exists(dir)) continue;
-                foreach (var p in Directory.EnumerateFiles(dir, "*.png"))
-                {
-                    try { list.Add((p, File.GetCreationTime(p))); } catch { }
-                }
-            }
-            return list.OrderByDescending(x => x.When).Select(x => x.Path).ToList();
-        });
+            var customDir = SettingsStore.Shared.Settings.Cleanup.SaveDirectory;
+            var pics = !string.IsNullOrWhiteSpace(customDir) && Directory.Exists(customDir)
+                ? customDir
+                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "QPARK Shot");
+            var temp = Path.Combine(Path.GetTempPath(), "QPARK Shot");
 
-        Screenshots.Clear();
-        foreach (var p in paths) Screenshots.Add(p);
-        EmptyState.Visibility = Screenshots.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            var paths = await Task.Run(() =>
+            {
+                var list = new List<(string Path, DateTime When)>();
+                foreach (var dir in new[] { pics, temp })
+                {
+                    if (!Directory.Exists(dir)) continue;
+                    foreach (var p in Directory.EnumerateFiles(dir, "*.png"))
+                    {
+                        try { list.Add((p, File.GetCreationTime(p))); } catch { }
+                    }
+                }
+                return list.OrderByDescending(x => x.When).Select(x => x.Path).ToList();
+            });
+
+            Screenshots.Clear();
+            foreach (var p in paths) Screenshots.Add(p);
+            EmptyState.Visibility = Screenshots.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogException("GalleryPage.LoadRecentAsync", ex);
+        }
     }
 
     private async void OnCapture(object sender, RoutedEventArgs e)
     {
-        await CaptureService.Shared.TriggerCapture();
+        try
+        {
+            await CaptureService.Shared.TriggerCapture();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogException("GalleryPage.OnCapture", ex);
+        }
     }
 
     private void OnSettings(object sender, RoutedEventArgs e) => App.MainWindowInstance?.ShowSettings();

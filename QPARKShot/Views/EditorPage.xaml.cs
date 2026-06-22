@@ -33,12 +33,19 @@ public partial class EditorPage : Page
 
     private async Task LoadActiveAsync()
     {
-        var item = ShotQueueStore.Shared.Item(_itemId);
-        if (item == null) return;
-        _sourceBitmap?.Dispose();
-        _sourceBitmap = await Task.Run(() => BitmapHelpers.LoadBitmap(item.Path));
-        if (_sourceBitmap == null) return;
-        Canvas.LoadImage(_sourceBitmap);
+        try
+        {
+            var item = ShotQueueStore.Shared.Item(_itemId);
+            if (item == null) return;
+            _sourceBitmap?.Dispose();
+            _sourceBitmap = await Task.Run(() => BitmapHelpers.LoadBitmap(item.Path));
+            if (_sourceBitmap == null) return;
+            Canvas.LoadImage(_sourceBitmap);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogException("EditorPage.LoadActiveAsync", ex);
+        }
     }
 
     private async void ShowItem(Guid id)
@@ -102,16 +109,23 @@ public partial class EditorPage : Page
 
     private async void OnPreview(object sender, RoutedEventArgs e)
     {
-        if (_sourceBitmap == null) return;
-        PreviewOverlay.Visibility = Visibility.Visible;
-        PreviewSpinner.Visibility = Visibility.Visible;
-        PreviewImage.Source = null;
-        var rendered = await Task.Run(() => RenderForExport());
-        PreviewSpinner.Visibility = Visibility.Collapsed;
-        if (rendered != null)
+        try
         {
-            PreviewImage.Source = BitmapHelpers.ToBitmapSource(rendered);
-            rendered.Dispose();
+            if (_sourceBitmap == null) return;
+            PreviewOverlay.Visibility = Visibility.Visible;
+            PreviewSpinner.Visibility = Visibility.Visible;
+            PreviewImage.Source = null;
+            var rendered = await Task.Run(() => RenderForExport());
+            PreviewSpinner.Visibility = Visibility.Collapsed;
+            if (rendered != null)
+            {
+                PreviewImage.Source = BitmapHelpers.ToBitmapSource(rendered);
+                rendered.Dispose();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogException("EditorPage.OnPreview", ex);
         }
     }
 
@@ -119,23 +133,37 @@ public partial class EditorPage : Page
 
     private async void OnCopy(object sender, RoutedEventArgs e)
     {
-        if (_sourceBitmap == null) return;
-        var rendered = await Task.Run(() => RenderForExport());
-        if (rendered == null) return;
-        await ClipboardService.SetBitmapAsync(rendered);
-        rendered.Dispose();
+        try
+        {
+            if (_sourceBitmap == null) return;
+            var rendered = await Task.Run(() => RenderForExport());
+            if (rendered == null) return;
+            await ClipboardService.SetBitmapAsync(rendered);
+            rendered.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogException("EditorPage.OnCopy", ex);
+        }
     }
 
     private async void OnSave(object sender, RoutedEventArgs e)
     {
-        if (_sourceBitmap == null) return;
-        var rendered = await Task.Run(() => RenderForExport());
-        if (rendered == null) return;
-        var saved = ImageExportService.SaveBitmap(rendered, isTemporary: false);
-        rendered.Dispose();
-        if (saved != null)
+        try
         {
-            App.MainWindowInstance?.ShowGallery();
+            if (_sourceBitmap == null) return;
+            var rendered = await Task.Run(() => RenderForExport());
+            if (rendered == null) return;
+            var saved = ImageExportService.SaveBitmap(rendered, isTemporary: false);
+            rendered.Dispose();
+            if (saved != null)
+            {
+                App.MainWindowInstance?.ShowGallery();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogException("EditorPage.OnSave", ex);
         }
     }
 }

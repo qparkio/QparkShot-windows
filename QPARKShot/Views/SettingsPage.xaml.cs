@@ -10,6 +10,7 @@ using System.Windows.Navigation;
 using Microsoft.Win32;
 using QPARKShot.Models;
 using QPARKShot.Services;
+using QPARKShot.Helpers;
 using WinFormsColorDialog = System.Windows.Forms.ColorDialog;
 using WinFormsFolderDialog = System.Windows.Forms.FolderBrowserDialog;
 using WinFormsDialogResult = System.Windows.Forms.DialogResult;
@@ -96,14 +97,18 @@ public partial class SettingsPage : Page
         VerticalAlignment = VerticalAlignment.Center,
     };
 
-    private static TextBlock Hint(string text) => new()
+    private static TextBlock Hint(string text)
     {
-        Text = text,
-        FontSize = 11,
-        Foreground = (Brush)Application.Current.Resources["SecondaryText"],
-        TextWrapping = TextWrapping.Wrap,
-        Margin = new Thickness(0, 4, 0, 0),
-    };
+        var tb = new TextBlock
+        {
+            Text = text,
+            FontSize = 11,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 4, 0, 0),
+        };
+        tb.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryText");
+        return tb;
+    }
 
     // ===== Appearance =====
     private void BuildAppearance()
@@ -232,11 +237,54 @@ public partial class SettingsPage : Page
 
         // Text watermark
         var txtToggle = new CheckBox { Content = "Text watermark", IsChecked = s.Text.Enabled, FontWeight = FontWeights.SemiBold };
-        var txtField = new TextBox { Text = s.Text.Text, Width = 240, HorizontalAlignment = HorizontalAlignment.Left, IsEnabled = s.Text.Enabled, Margin = new Thickness(0, 6, 0, 0) };
-        txtToggle.Checked += (_, _) => { s.Text.Enabled = true; txtField.IsEnabled = true; SettingsStore.Shared.Save(); };
-        txtToggle.Unchecked += (_, _) => { s.Text.Enabled = false; txtField.IsEnabled = false; SettingsStore.Shared.Save(); };
+        var txtField = new TextBox { Text = s.Text.Text, Width = 200, HorizontalAlignment = HorizontalAlignment.Left, IsEnabled = s.Text.Enabled, Margin = new Thickness(0, 6, 8, 0) };
+        
+        var colorRect = new System.Windows.Shapes.Rectangle
+        {
+            Width = 24, Height = 24,
+            Stroke = System.Windows.Media.Brushes.Gray,
+            StrokeThickness = 1,
+            RadiusX = 4, RadiusY = 4,
+            Cursor = System.Windows.Input.Cursors.Hand,
+            IsEnabled = s.Text.Enabled,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        try
+        {
+            colorRect.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString(s.Text.Color));
+        }
+        catch
+        {
+            colorRect.Fill = System.Windows.Media.Brushes.White;
+        }
+
+        colorRect.MouseLeftButtonUp += (sender, args) =>
+        {
+            if (!s.Text.Enabled) return;
+            var dlg = new WinFormsColorDialog
+            {
+                AllowFullOpen = true,
+                FullOpen = true,
+            };
+            if (colorRect.Fill is SolidColorBrush currentBrush)
+            {
+                dlg.Color = System.Drawing.Color.FromArgb(currentBrush.Color.A, currentBrush.Color.R, currentBrush.Color.G, currentBrush.Color.B);
+            }
+            if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                var c = System.Windows.Media.Color.FromArgb(dlg.Color.A, dlg.Color.R, dlg.Color.G, dlg.Color.B);
+                colorRect.Fill = new SolidColorBrush(c);
+                s.Text.Color = ColorHelpers.ToHex(c);
+                SettingsStore.Shared.Save();
+            }
+        };
+
+        txtToggle.Checked += (_, _) => { s.Text.Enabled = true; txtField.IsEnabled = true; colorRect.IsEnabled = true; SettingsStore.Shared.Save(); };
+        txtToggle.Unchecked += (_, _) => { s.Text.Enabled = false; txtField.IsEnabled = false; colorRect.IsEnabled = false; SettingsStore.Shared.Save(); };
         txtField.TextChanged += (_, _) => { s.Text.Text = txtField.Text; SettingsStore.Shared.Save(); };
-        left.Children.Add(Card(V(txtToggle, txtField)));
+
+        var textWatermarkRow = H(txtField, colorRect);
+        left.Children.Add(Card(V(txtToggle, textWatermarkRow)));
 
         // Logo watermark
         var logoToggle = new CheckBox { Content = "Logo watermark", IsChecked = s.Logo.Enabled, FontWeight = FontWeights.SemiBold };
@@ -414,13 +462,15 @@ public partial class SettingsPage : Page
             Text = "QPARK Shot", FontSize = 24, FontWeight = FontWeights.Bold,
             HorizontalAlignment = HorizontalAlignment.Center,
         });
-        box.Children.Add(new TextBlock
+
+        var versionLabel = new TextBlock
         {
             Text = $"Version {version}", FontSize = 12,
-            Foreground = (Brush)Application.Current.Resources["SecondaryText"],
             HorizontalAlignment = HorizontalAlignment.Center,
             Margin = new Thickness(0, 4, 0, 12),
-        });
+        };
+        versionLabel.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryText");
+        box.Children.Add(versionLabel);
 
         var link = new TextBlock { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 12) };
         var hyperlink = new Hyperlink(new Run("QPARK.IO")) { NavigateUri = new Uri("https://qpark.io") };
@@ -428,20 +478,23 @@ public partial class SettingsPage : Page
         link.Inlines.Add(hyperlink);
         box.Children.Add(link);
 
-        box.Children.Add(new TextBlock
+        var descLabel = new TextBlock
         {
             Text = "Professional screenshots workspace utility.",
             HorizontalAlignment = HorizontalAlignment.Center,
-            Foreground = (Brush)Application.Current.Resources["SecondaryText"],
-        });
-        box.Children.Add(new TextBlock
+        };
+        descLabel.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryText");
+        box.Children.Add(descLabel);
+
+        var copyLabel = new TextBlock
         {
             Text = "Copyright © 2026 QPARK. All rights reserved.",
             FontSize = 10,
             Margin = new Thickness(0, 16, 0, 0),
             HorizontalAlignment = HorizontalAlignment.Center,
-            Foreground = (Brush)Application.Current.Resources["SecondaryText"],
-        });
+        };
+        copyLabel.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryText");
+        box.Children.Add(copyLabel);
 
         ContentRoot.Children.Add(Card(box));
     }
