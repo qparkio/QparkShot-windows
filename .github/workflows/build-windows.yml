@@ -14,19 +14,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Use the pre-installed Visual Studio + .NET 8 SDK on the runner —
-      # it ships with the AppxPackage / WindowsAppSDK MSBuild targets that
-      # `setup-dotnet`'s slim SDK doesn't include. global.json pins to 8.x.
-      - name: Show active SDK
+      - name: Setup MSBuild (from pre-installed VS)
+        uses: microsoft/setup-msbuild@v2
+
+      - name: NuGet restore
+        run: msbuild QPARKShot.sln -t:Restore -p:Configuration=Release -p:Platform=x64
+
+      - name: Build + Publish
         run: |
-          dotnet --info | Select-String -Pattern "Version|RID" -SimpleMatch
-          dotnet --list-sdks
-
-      - name: Restore
-        run: dotnet restore QPARKShot.sln
-
-      - name: Build (Release)
-        run: pwsh ./scripts/build_release.ps1
+          msbuild QPARKShot\QPARKShot.csproj `
+            -t:Publish `
+            -p:Configuration=Release `
+            -p:Platform=x64 `
+            -p:RuntimeIdentifier=win-x64 `
+            -p:SelfContained=false `
+            -p:PublishDir=build\Release\ `
+            -p:PublishReadyToRun=false `
+            -p:PublishSingleFile=false `
+            -p:WindowsPackageType=None
 
       - name: List build output (debug)
         run: |
