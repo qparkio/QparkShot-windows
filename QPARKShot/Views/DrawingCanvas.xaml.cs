@@ -97,23 +97,33 @@ public sealed partial class DrawingCanvas : UserControl
         switch (CurrentTool)
         {
             case ToolType.Freehand:
-                _activeAnnotation = new FreehandAnnotation(
-                    Guid.NewGuid(), CurrentColorHex, CurrentStrokeWidth,
-                    new List<Point> { pos });
+                _activeAnnotation = new FreehandAnnotation
+                {
+                    ColorHex = CurrentColorHex, StrokeWidth = CurrentStrokeWidth,
+                    Points = new List<Point> { pos },
+                };
                 break;
             case ToolType.Arrow:
-                _activeAnnotation = new ArrowAnnotation(
-                    Guid.NewGuid(), CurrentColorHex, CurrentStrokeWidth, pos, pos);
+                _activeAnnotation = new ArrowAnnotation
+                {
+                    ColorHex = CurrentColorHex, StrokeWidth = CurrentStrokeWidth,
+                    Start = pos, End = pos,
+                };
                 break;
             case ToolType.Rectangle:
-                _activeAnnotation = new RectangleAnnotation(
-                    Guid.NewGuid(), CurrentColorHex, CurrentStrokeWidth,
-                    new Rect(pos.X, pos.Y, 0, 0));
+                _activeAnnotation = new RectangleAnnotation
+                {
+                    ColorHex = CurrentColorHex, StrokeWidth = CurrentStrokeWidth,
+                    Rect = new Rect(pos.X, pos.Y, 0, 0),
+                };
                 break;
             case ToolType.Text:
                 var text = string.IsNullOrWhiteSpace(TextInput) ? "Text" : TextInput;
-                var t = new TextAnnotation(Guid.NewGuid(), CurrentColorHex, CurrentStrokeWidth, pos, text, 18);
-                Annotations.Add(t);
+                Annotations.Add(new TextAnnotation
+                {
+                    ColorHex = CurrentColorHex, StrokeWidth = CurrentStrokeWidth,
+                    Position = pos, Text = text, FontSize = 18,
+                });
                 RecordUndo();
                 Rebuild();
                 _activeAnnotation = null;
@@ -137,7 +147,7 @@ public sealed partial class DrawingCanvas : UserControl
                 fh.Points.Add(pos);
                 break;
             case ArrowAnnotation arrow:
-                _activeAnnotation = arrow with { End = pos };
+                arrow.End = pos;
                 break;
             case RectangleAnnotation r:
             {
@@ -145,7 +155,7 @@ public sealed partial class DrawingCanvas : UserControl
                 double y = Math.Min(_dragStart.Y, pos.Y);
                 double w = Math.Abs(pos.X - _dragStart.X);
                 double h = Math.Abs(pos.Y - _dragStart.Y);
-                _activeAnnotation = r with { Rect = new Rect(x, y, w, h) };
+                r.Rect = new Rect(x, y, w, h);
                 break;
             }
         }

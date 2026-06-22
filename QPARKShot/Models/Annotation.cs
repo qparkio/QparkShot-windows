@@ -14,38 +14,36 @@ public enum ToolType
 }
 
 /// <summary>
-/// Editor annotation. Sum type via abstract record + variants.
+/// Editor annotation. Plain classes (not records) so the WinUI XAML type-info
+/// generator can produce setters without complaining about init-only props.
 /// Coordinates are in source-image pixel space.
 /// </summary>
-public abstract record Annotation(Guid Id, string ColorHex, double StrokeWidth);
+public abstract class Annotation
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string ColorHex { get; set; } = "#FFFFFF";
+    public double StrokeWidth { get; set; } = 4.0;
+}
 
-public sealed record FreehandAnnotation(
-    Guid Id,
-    string ColorHex,
-    double StrokeWidth,
-    List<Point> Points
-) : Annotation(Id, ColorHex, StrokeWidth);
+public sealed class FreehandAnnotation : Annotation
+{
+    public List<Point> Points { get; set; } = new();
+}
 
-public sealed record ArrowAnnotation(
-    Guid Id,
-    string ColorHex,
-    double StrokeWidth,
-    Point Start,
-    Point End
-) : Annotation(Id, ColorHex, StrokeWidth);
+public sealed class ArrowAnnotation : Annotation
+{
+    public Point Start { get; set; }
+    public Point End { get; set; }
+}
 
-public sealed record RectangleAnnotation(
-    Guid Id,
-    string ColorHex,
-    double StrokeWidth,
-    Rect Rect
-) : Annotation(Id, ColorHex, StrokeWidth);
+public sealed class RectangleAnnotation : Annotation
+{
+    public Rect Rect { get; set; }
+}
 
-public sealed record TextAnnotation(
-    Guid Id,
-    string ColorHex,
-    double StrokeWidth,
-    Point Position,
-    string Text,
-    double FontSize
-) : Annotation(Id, ColorHex, StrokeWidth);
+public sealed class TextAnnotation : Annotation
+{
+    public Point Position { get; set; }
+    public string Text { get; set; } = "";
+    public double FontSize { get; set; } = 18;
+}
