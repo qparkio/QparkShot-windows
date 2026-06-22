@@ -72,7 +72,7 @@
                         <TextBlock Text="📋 Copy" />
                     </Button>
                     <Button Click="OnSave" Padding="12,5" Margin="4,0"
-                            Background="{StaticResource QPARKAccent}" Foreground="White"
+                            Background="{DynamicResource QPARKAccent}" Foreground="White"
                             BorderThickness="0">
                         <TextBlock Text="💾 Save" FontWeight="SemiBold" />
                     </Button>

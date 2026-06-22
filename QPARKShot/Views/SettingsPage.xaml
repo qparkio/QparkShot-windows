@@ -11,8 +11,8 @@
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
-        <Border Grid.Column="0" Background="{StaticResource SidebarFill}"
-                BorderBrush="{StaticResource DividerStroke}" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="{DynamicResource SidebarFill}"
+                BorderBrush="{DynamicResource DividerStroke}" BorderThickness="0,0,1,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -32,7 +32,7 @@
                 <StackPanel Grid.Row="1" Margin="14,12,14,8">
                     <TextBlock Text="QPARK Shot" FontSize="14" FontWeight="Bold" />
                     <TextBlock Text="Preferences" FontSize="10"
-                               Foreground="{StaticResource SecondaryText}" />
+                               Foreground="{DynamicResource SecondaryText}" />
                 </StackPanel>
 
                 <ListBox x:Name="TabList" Grid.Row="2" Margin="8,0" BorderThickness="0"

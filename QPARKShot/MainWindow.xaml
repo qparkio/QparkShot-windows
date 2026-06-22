@@ -6,8 +6,8 @@
     Width="1100" Height="720"
     MinWidth="900" MinHeight="600"
     WindowStartupLocation="CenterScreen"
-    Background="#1C1C1E"
-    Foreground="#F2F2F7"
+    Background="{DynamicResource WindowBackground}"
+    Foreground="{DynamicResource WindowForeground}"
     TextOptions.TextFormattingMode="Display"
     UseLayoutRounding="True">
     <Grid x:Name="RootGrid">

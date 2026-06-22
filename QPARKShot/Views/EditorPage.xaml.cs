@@ -23,6 +23,11 @@ public partial class EditorPage : Page
         _itemId = itemId;
         ShotQueueStore.Shared.ActiveId = itemId;
         QueueSidebar.OnRequestOpen = ShowItem;
+        
+        // Sync initial combobox selections to Canvas safely after InitializeComponent
+        OnToolChanged(null!, null);
+        OnSizeChanged(null!, null);
+
         Loaded += async (_, _) => await LoadActiveAsync();
     }
 
@@ -47,8 +52,9 @@ public partial class EditorPage : Page
     private void OnUndo(object sender, RoutedEventArgs e) => Canvas.Undo();
     private void OnRedo(object sender, RoutedEventArgs e) => Canvas.Redo();
 
-    private void OnToolChanged(object sender, SelectionChangedEventArgs e)
+    private void OnToolChanged(object sender, SelectionChangedEventArgs? e)
     {
+        if (Canvas == null || TextInput == null || ToolPicker == null) return;
         if (ToolPicker.SelectedItem is ComboBoxItem item && item.Tag is string tag &&
             Enum.TryParse<ToolType>(tag, out var t))
         {
@@ -77,8 +83,9 @@ public partial class EditorPage : Page
         }
     }
 
-    private void OnSizeChanged(object sender, SelectionChangedEventArgs e)
+    private void OnSizeChanged(object sender, SelectionChangedEventArgs? e)
     {
+        if (Canvas == null || SizePicker == null) return;
         if (SizePicker.SelectedItem is ComboBoxItem item &&
             double.TryParse(item.Tag?.ToString(), out var w))
         {

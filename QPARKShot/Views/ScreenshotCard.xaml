@@ -34,7 +34,7 @@
         </Border>
 
         <TextBlock Grid.Row="1" x:Name="NameText" FontSize="10"
-                   Foreground="{StaticResource SecondaryText}"
+                   Foreground="{DynamicResource SecondaryText}"
                    TextTrimming="CharacterEllipsis" Margin="2,4,2,0" />
     </Grid>
 </UserControl>
