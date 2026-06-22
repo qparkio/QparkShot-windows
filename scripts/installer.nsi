@@ -14,7 +14,7 @@ SetCompressor /SOLID lzma
 
 Name "${APP_NAME}"
 OutFile "..\build\Installer\QPARKShot-Setup-${APP_VERSION}.exe"
-InstallDir "$LOCALAPPDATA\QPARK Shot"
+InstallDir "$LOCALAPPDATA\Programs\QPARK Shot"
 InstallDirRegKey HKCU "Software\QPARK\QPARKShot" "InstallDir"
 RequestExecutionLevel user
 BrandingText "${APP_PUBLISHER} — ${APP_NAME} ${APP_VERSION}"
@@ -30,7 +30,7 @@ ShowUninstDetails show
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
-!define MUI_FINISHPAGE_RUN "$INSTDIR\${APP_EXE}"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\app\${APP_EXE}"
 !define MUI_FINISHPAGE_RUN_TEXT "Launch ${APP_NAME}"
 !insertmacro MUI_PAGE_FINISH
 
@@ -43,19 +43,21 @@ ShowUninstDetails show
 
 Section "QPARK Shot" SecMain
     SectionIn RO
-    SetOutPath "$INSTDIR"
 
-    ; Copy the entire self-contained publish output.
+    ; Put all runtime files into a subfolder so the install root stays clean.
+    SetOutPath "$INSTDIR\app"
     File /r "..\build\Release\*.*"
 
     ; Start Menu shortcut.
     CreateDirectory "$SMPROGRAMS\${APP_NAME}"
     CreateShortCut  "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" \
-                    "$INSTDIR\${APP_EXE}" "" "$INSTDIR\${APP_EXE}" 0
+                    "$INSTDIR\app\${APP_EXE}" "" "$INSTDIR\app\${APP_EXE}" 0
 
-    ; Desktop shortcut (optional but expected).
+    ; Desktop shortcut.
     CreateShortCut  "$DESKTOP\${APP_NAME}.lnk" \
-                    "$INSTDIR\${APP_EXE}" "" "$INSTDIR\${APP_EXE}" 0
+                    "$INSTDIR\app\${APP_EXE}" "" "$INSTDIR\app\${APP_EXE}" 0
+
+    SetOutPath "$INSTDIR"
 
     ; Registry: install dir + uninstaller entry in Add/Remove Programs.
     WriteRegStr HKCU "Software\QPARK\QPARKShot" "InstallDir" "$INSTDIR"
@@ -63,7 +65,7 @@ Section "QPARK Shot" SecMain
 
     WriteRegStr HKCU "${APP_REG_KEY}" "DisplayName"      "${APP_NAME}"
     WriteRegStr HKCU "${APP_REG_KEY}" "DisplayVersion"   "${APP_VERSION}"
-    WriteRegStr HKCU "${APP_REG_KEY}" "DisplayIcon"      "$INSTDIR\${APP_EXE}"
+    WriteRegStr HKCU "${APP_REG_KEY}" "DisplayIcon"      "$INSTDIR\app\${APP_EXE}"
     WriteRegStr HKCU "${APP_REG_KEY}" "Publisher"        "${APP_PUBLISHER}"
     WriteRegStr HKCU "${APP_REG_KEY}" "URLInfoAbout"     "${APP_URL}"
     WriteRegStr HKCU "${APP_REG_KEY}" "InstallLocation"  "$INSTDIR"

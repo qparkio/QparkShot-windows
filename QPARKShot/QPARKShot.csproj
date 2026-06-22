@@ -38,6 +38,18 @@
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
   </ItemGroup>
 
+  <!-- Force-remove the bootstrap auto-initializer for self-contained builds.
+       Even with WindowsAppSDKSelfContained=true, the 1.5 SDK still injects
+       MddBootstrapAutoInitializer.cs whose [ModuleInitializer] calls
+       Bootstrap.Initialize(0x00010005). That call ignores the locally-bundled
+       runtime and demands a globally-installed MSIX package, popping the
+       infamous "requires Windows App Runtime 1.5" dialog. We don't want it. -->
+  <Target Name="RemoveBootstrapAutoInitializer" AfterTargets="ResolvePackageAssets">
+    <ItemGroup>
+      <Compile Remove="@(Compile)" Condition="'%(FileName)%(Extension)' == 'MddBootstrapAutoInitializer.cs'" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <Content Include="Assets\AppIcon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
