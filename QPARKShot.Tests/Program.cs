@@ -90,6 +90,16 @@ internal static class Program
         Check(blurred != null && blurred.Width == source.Width, "blur render succeeds without modifying dimensions");
         using var thumbnail = BitmapHelpers.Thumbnail(path, 1000);
         Check(thumbnail?.Width == 800, "small thumbnail remains usable after source disposal");
+        Directory.CreateDirectory(AppPaths.TemporaryDirectory);
+        var protectedTemp = Path.Combine(AppPaths.TemporaryDirectory, "active.png"); source.Save(protectedTemp);
+        var expiredTemp = Path.Combine(AppPaths.TemporaryDirectory, "expired.png"); source.Save(expiredTemp);
+        File.SetLastWriteTimeUtc(protectedTemp, DateTime.UtcNow.AddDays(-10)); File.SetLastWriteTimeUtc(expiredTemp, DateTime.UtcNow.AddDays(-10));
+        var active = ShotQueueStore.Shared.Enqueue(protectedTemp);
+        SettingsStore.Shared.Settings.Cleanup.Mode = "afterDuration";
+        await CleanupService.PerformAsync();
+        Check(File.Exists(protectedTemp) && !File.Exists(expiredTemp), "cleanup preserves active captures while removing expired owned temp files");
+        ShotQueueStore.Shared.Remove(active.Id);
+        SettingsStore.Shared.Settings.Cleanup.Mode = "never";
         var index = new GalleryIndexStore(Path.Combine(AppPaths.TestRoot!, "index.json"));
         var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { AppPaths.DefaultPicturesDirectory };
         index.Reconcile(new[] { path }, roots); index.Entries[path].Favorite = true; index.Entries[path].Tags = new() { "support" }; index.Save();
@@ -123,11 +133,14 @@ internal static class Program
         await editor.ExportActionAsync("save"); Check(!EditorDraftStore.Shared.For(first.Id).IsDirty, "editor save marks the rendered snapshot saved");
         window.ShowReview(first.Id); await Task.Delay(250); await SaveWindowAsync(window, "review-en-light");
         window.ShowGallery();
-        SettingsStore.Shared.Settings.Localization.AppLanguageCode = "ru"; App.ApplyTheme("dark");
+        SettingsStore.Shared.Settings.Localization.AppLanguageCode = "ru"; SettingsStore.Shared.Settings.ThemePreference = "dark"; App.ApplyTheme("dark");
         L.Shared.Refresh(); window.ShowGallery(); await SaveWindowAsync(window, "library-ru-dark");
         window.Width = 1000; window.Height = 720; window.ShowEditor(first.Id); await Task.Delay(150); await SaveWindowAsync(window, "editor-ru-compact");
         var settingsWindow = new Window { Content = new SettingsPage("appearance"), Width = 940, Height = 720 };
         settingsWindow.SetResourceReference(Window.BackgroundProperty, "WindowBackground"); settingsWindow.Show(); await SaveWindowAsync(settingsWindow, "settings-ru-dark"); settingsWindow.Close();
+        var watermarkWindow = new Window { Content = new SettingsPage("watermark"), Width = 940, Height = 720 };
+        watermarkWindow.SetResourceReference(Window.BackgroundProperty, "WindowBackground"); watermarkWindow.SetResourceReference(Window.ForegroundProperty, "WindowForeground");
+        watermarkWindow.Show(); await SaveWindowAsync(watermarkWindow, "watermark-ru-dark"); watermarkWindow.Close();
         foreach (var code in L.Languages)
         {
             SettingsStore.Shared.Settings.Localization.AppLanguageCode = code;
@@ -147,8 +160,9 @@ internal static class Program
     private static async Task SaveWindowAsync(Window window, string name)
     {
         await Task.Delay(150); window.UpdateLayout();
-        var bitmap = new RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(window);
+        var content = (FrameworkElement)window.Content;
+        var bitmap = new RenderTargetBitmap((int)content.ActualWidth, (int)content.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(content);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var stream = File.Create(Path.Combine(_output, name + ".png")); encoder.Save(stream);
     }

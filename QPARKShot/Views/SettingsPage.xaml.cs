@@ -148,7 +148,7 @@ public partial class SettingsPage : UserControl
         ContentRoot.Children.Add(Card(V(
             Label(L.T("settings.appearance"), weight: FontWeights.SemiBold),
             picker,
-            Hint("System follows the current Windows theme.")
+            Hint(L.T("windows.theme_hint"))
         )));
     }
 
@@ -156,8 +156,8 @@ public partial class SettingsPage : UserControl
     private void BuildHotkeys()
     {
         ContentRoot.Children.Add(Header(L.T("settings.capture")));
-        ContentRoot.Children.Add(HotkeyCard(L.T("settings.selection_shortcut"), SettingsStore.Shared.Settings.Hotkey, "Default: Ctrl + Shift + C"));
-        ContentRoot.Children.Add(HotkeyCard(L.T("settings.fullscreen_shortcut"), SettingsStore.Shared.Settings.FullScreenHotkey, "Off by default"));
+        ContentRoot.Children.Add(HotkeyCard(L.T("settings.selection_shortcut"), SettingsStore.Shared.Settings.Hotkey, L.T("windows.shortcut_default")));
+        ContentRoot.Children.Add(HotkeyCard(L.T("settings.fullscreen_shortcut"), SettingsStore.Shared.Settings.FullScreenHotkey, L.T("windows.off_default")));
         ContentRoot.Children.Add(CaptureModeCard());
     }
 
@@ -195,7 +195,7 @@ public partial class SettingsPage : UserControl
         key.TextChanged += (_, _) => Persist();
 
         var content = V(toggle, Hint(subtitle));
-        var detail = H(ctrl, shift, alt, win, Label("Key: ", size: 11), key);
+        var detail = H(ctrl, shift, alt, win, Label(L.T("windows.key"), size: 11), key);
         detail.Margin = new Thickness(0, 8, 0, 0);
         content.Children.Add(detail);
         content.Children.Add(error);
@@ -206,8 +206,10 @@ public partial class SettingsPage : UserControl
     {
         var s = SettingsStore.Shared.Settings;
         var modePicker = new ComboBox { Width = 200, HorizontalAlignment = HorizontalAlignment.Left };
-        modePicker.Items.Add(new ComboBoxItem { Content = "Selection", Tag = "selection", IsSelected = s.Capture.Mode == "selection" });
+        modePicker.Items.Add(new ComboBoxItem { Content = L.T("capture.selected_area"), Tag = "selection", IsSelected = s.Capture.Mode == "selection" });
         modePicker.Items.Add(new ComboBoxItem { Content = L.T("capture.full_screen"), Tag = "fullScreen", IsSelected = s.Capture.Mode == "fullScreen" });
+        modePicker.Items.Add(new ComboBoxItem { Content = L.T("capture.window"), Tag = "window", IsSelected = s.Capture.Mode == "window" });
+        modePicker.Items.Add(new ComboBoxItem { Content = L.T("capture.repeat_area"), Tag = "repeatArea", IsSelected = s.Capture.Mode == "repeatArea" });
         modePicker.SelectionChanged += (_, _) =>
         {
             s.Capture.Mode = (modePicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "selection";
@@ -215,7 +217,7 @@ public partial class SettingsPage : UserControl
         };
 
         var delayPicker = new ComboBox { Width = 100, HorizontalAlignment = HorizontalAlignment.Left };
-        foreach (var (label, sec) in new[] { ("None", 0), ("3 s", 3), ("5 s", 5), ("10 s", 10) })
+        foreach (var (label, sec) in new[] { ("0 s", 0), ("3 s", 3), ("5 s", 5), ("10 s", 10) })
         {
             delayPicker.Items.Add(new ComboBoxItem { Content = label, Tag = sec, IsSelected = s.Capture.DelaySeconds == sec });
         }
@@ -226,12 +228,12 @@ public partial class SettingsPage : UserControl
         };
 
         return Card(V(
-            Label("Default Capture Mode", weight: FontWeights.SemiBold),
+            Label(L.T("settings.capture_mode"), weight: FontWeights.SemiBold),
             modePicker,
             new Border { Height = 8 },
-            Label("Default Delay", weight: FontWeights.SemiBold),
+            Label(L.T("settings.capture_delay"), weight: FontWeights.SemiBold),
             delayPicker,
-            Hint("The tray menu always offers one-shot delay options regardless of this setting.")
+            Hint(L.T("settings.subtitle.capture"))
         ));
     }
 
@@ -242,23 +244,23 @@ public partial class SettingsPage : UserControl
         ContentRoot.Children.Add(Header(L.T("settings.watermark")));
 
         var twoCol = new Grid();
-        twoCol.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
-        twoCol.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        twoCol.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        twoCol.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(250) });
 
         var left = new StackPanel();
         Grid.SetColumn(left, 0);
 
         // Layout mode
         var layoutPicker = new ComboBox { Width = 180, HorizontalAlignment = HorizontalAlignment.Left };
-        layoutPicker.Items.Add(new ComboBoxItem { Content = "Single Position", Tag = "single", IsSelected = s.LayoutMode == "single" });
-        layoutPicker.Items.Add(new ComboBoxItem { Content = "Tiled (Diagonal)", Tag = "tiled", IsSelected = s.LayoutMode == "tiled" });
+        layoutPicker.Items.Add(new ComboBoxItem { Content = L.T("settings.watermark_layout_single"), Tag = "single", IsSelected = s.LayoutMode == "single" });
+        layoutPicker.Items.Add(new ComboBoxItem { Content = L.T("settings.watermark_layout_tiled"), Tag = "tiled", IsSelected = s.LayoutMode == "tiled" });
         layoutPicker.SelectionChanged += (_, _) =>
         {
             s.LayoutMode = (layoutPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "single";
             SettingsStore.Shared.Save();
             BuildTab();
         };
-        left.Children.Add(Card(V(Label("Layout", weight: FontWeights.SemiBold), layoutPicker)));
+        left.Children.Add(Card(V(Label(L.T("settings.watermark_layout"), weight: FontWeights.SemiBold), layoutPicker)));
 
         // Text watermark
         var txtToggle = new CheckBox { Content = L.T("settings.watermark_text"), IsChecked = s.Text.Enabled, FontWeight = FontWeights.SemiBold };
@@ -314,7 +316,7 @@ public partial class SettingsPage : UserControl
         // Logo watermark
         var logoToggle = new CheckBox { Content = L.T("settings.watermark_logo"), IsChecked = s.Logo.Enabled, FontWeight = FontWeights.SemiBold };
         var logoPathBox = new TextBox { Text = s.Logo.Path, IsReadOnly = true, Width = 200, Margin = new Thickness(0, 0, 8, 0) };
-        var browseBtn = new Button { Content = L.T("settings.choose_folder"), Padding = new Thickness(10, 4, 10, 4) };
+        var browseBtn = new Button { Content = L.T("settings.choose_logo"), Padding = new Thickness(10, 4, 10, 4) };
         browseBtn.Click += (_, _) =>
         {
             var dlg = new OpenFileDialog { Filter = "Images|*.png;*.jpg;*.jpeg" };
@@ -348,14 +350,14 @@ public partial class SettingsPage : UserControl
                 s.Logo.PositionMode = (posPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "bottomRight";
                 SettingsStore.Shared.Save();
             };
-            left.Children.Add(Card(V(Label("Position", weight: FontWeights.SemiBold), posPicker)));
+            left.Children.Add(Card(V(Label(L.T("settings.watermark_position"), weight: FontWeights.SemiBold), posPicker)));
         }
 
         // Tiled options
         if (s.LayoutMode == "tiled")
         {
             var patternPicker = new ComboBox { Width = 200, HorizontalAlignment = HorizontalAlignment.Left };
-            foreach (var (label, tag) in new[] { (L.T("settings.tile.aligned"), "aligned"), (L.T("settings.tile.brick"), "brick"), ("Chaos", "random") })
+            foreach (var (label, tag) in new[] { (L.T("settings.tile.aligned"), "aligned"), (L.T("settings.tile.brick"), "brick"), (L.T("settings.tile.random"), "random") })
             {
                 patternPicker.Items.Add(new ComboBoxItem { Content = label, Tag = tag, IsSelected = s.TilePattern == tag });
             }
@@ -369,9 +371,9 @@ public partial class SettingsPage : UserControl
             spacing.ValueChanged += (_, _) => { s.Spacing = spacing.Value; SettingsStore.Shared.Save(); };
 
             left.Children.Add(Card(V(
-                Label("Pattern", weight: FontWeights.SemiBold), patternPicker,
+                Label(L.T("settings.watermark_tile_pattern"), weight: FontWeights.SemiBold), patternPicker,
                 new Border { Height = 8 },
-                Label("Spacing", weight: FontWeights.SemiBold), spacing
+                Label(L.T("settings.watermark_spacing"), weight: FontWeights.SemiBold), spacing
             )));
         }
 
@@ -390,7 +392,7 @@ public partial class SettingsPage : UserControl
 
         twoCol.Children.Add(left);
 
-        var preview = new WatermarkPreview { Margin = new Thickness(20, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top };
+        var preview = new WatermarkPreview { Width = 230, Margin = new Thickness(20, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top };
         Grid.SetColumn(preview, 1);
         twoCol.Children.Add(preview);
 
@@ -405,7 +407,7 @@ public partial class SettingsPage : UserControl
 
         var savePath = new TextBox
         {
-            Text = string.IsNullOrEmpty(s.SaveDirectory) ? "Default (Pictures\\QPARK Shot)" : s.SaveDirectory,
+            Text = string.IsNullOrEmpty(s.SaveDirectory) ? L.T("settings.default_pictures") : s.SaveDirectory,
             IsReadOnly = true,
             Width = 320,
             Margin = new Thickness(0, 0, 8, 0),
@@ -440,7 +442,7 @@ public partial class SettingsPage : UserControl
 
         ContentRoot.Children.Add(Card(V(
             Label(L.T("settings.save_location"), weight: FontWeights.SemiBold),
-            H(savePath, browse)
+            savePath, browse
         )));
         ContentRoot.Children.Add(Card(V(
             Label(L.T("settings.cleanup"), weight: FontWeights.SemiBold),
@@ -460,17 +462,14 @@ public partial class SettingsPage : UserControl
         var toggle = new CheckBox { Content = L.T("settings.queue_panel"), IsChecked = s.PanelEnabled, FontWeight = FontWeights.SemiBold };
         toggle.Checked += (_, _) => { s.PanelEnabled = true; SettingsStore.Shared.Save(); };
         toggle.Unchecked += (_, _) => { s.PanelEnabled = false; SettingsStore.Shared.Save(); };
-        var hint = Hint(
-            "Keeps every screenshot you take in a vertical carousel on the left side of the editor. " +
-            "Click any item to switch, hover for preview-with-watermark and remove actions. " +
-            "The buffer lives only for the current session and is wiped on app restart.");
+        var hint = Hint(L.T("windows.session_hint"));
 
         var clearBtn = new Button { Content = L.T("workspace.clear_session"), IsEnabled = ShotQueueStore.Shared.Items.Count > 0, Padding = new Thickness(10, 4, 10, 4), HorizontalAlignment = HorizontalAlignment.Left };
         clearBtn.Click += (_, _) => { if (App.MainWindowInstance?.ConfirmClearSession() == true) clearBtn.IsEnabled = false; };
 
         ContentRoot.Children.Add(Card(V(toggle, hint)));
         ContentRoot.Children.Add(Card(V(
-            Label($"Buffer contains {ShotQueueStore.Shared.Items.Count} item(s)."),
+            Label(L.Format("workspace.clear_session_count", ShotQueueStore.Shared.Items.Count)),
             clearBtn
         )));
     }
@@ -535,7 +534,7 @@ public partial class SettingsPage : UserControl
 
         var versionLabel = new TextBlock
         {
-            Text = $"Version {version}", FontSize = 12,
+            Text = L.T("settings.version") + " " + version, FontSize = 12,
             HorizontalAlignment = HorizontalAlignment.Center,
             Margin = new Thickness(0, 4, 0, 12),
         };
@@ -550,7 +549,7 @@ public partial class SettingsPage : UserControl
 
         var descLabel = new TextBlock
         {
-            Text = "Professional screenshots workspace utility.",
+            Text = L.T("settings.subtitle.general"),
             HorizontalAlignment = HorizontalAlignment.Center,
         };
         descLabel.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryText");

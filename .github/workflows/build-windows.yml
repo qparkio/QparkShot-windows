@@ -50,7 +50,7 @@ jobs:
         shell: pwsh
         run: ./scripts/build-msix.ps1 -OutputDirectory build/Store -IdentityName $env:STORE_IDENTITY -Publisher $env:STORE_PUBLISHER -PublisherDisplayName $env:STORE_DISPLAY_NAME
       - name: Install MSIX and smoke test
-        shell: pwsh
+        shell: powershell
         run: ./scripts/test-msix.ps1
       - name: Upload packages and evidence
         if: always()

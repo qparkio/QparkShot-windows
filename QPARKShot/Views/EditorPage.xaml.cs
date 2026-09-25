@@ -136,6 +136,7 @@ public partial class EditorPage : UserControl, IDisposable
                 default:
                     var path = ImageExportService.SaveBitmap(rendered, false, preset, template);
                     draft.MarkSaved(snapshot);
+                    if (ShotQueueStore.Shared.Item(id) is { } item) item.ExportedPath = path;
                     await WorkspaceStore.Shared.RefreshAsync();
                     WorkspaceStore.Shared.Notify(L.T("editor.saved") + " · " + path); break;
             }

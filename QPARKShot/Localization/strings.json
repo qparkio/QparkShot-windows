@@ -2576,5 +2576,25 @@
   "windows.show_in_explorer": {
     "en": "Show in Explorer",
     "ru": "Показать в Проводнике"
+  },
+  "windows.theme_hint": {
+    "en": "Follows the current Windows theme.",
+    "ru": "Использует текущую тему Windows."
+  },
+  "windows.shortcut_default": {
+    "en": "Default: Ctrl + Shift + C",
+    "ru": "По умолчанию: Ctrl + Shift + C"
+  },
+  "windows.off_default": {
+    "en": "Off by default",
+    "ru": "По умолчанию выключено"
+  },
+  "windows.key": {
+    "en": "Key",
+    "ru": "Клавиша"
+  },
+  "windows.session_hint": {
+    "en": "Captures and their edits remain available until you clear the session or quit. Saved PNG files stay in your library.",
+    "ru": "Снимки и их правки доступны до очистки сессии или выхода. Сохранённые PNG остаются в библиотеке."
   }
 }

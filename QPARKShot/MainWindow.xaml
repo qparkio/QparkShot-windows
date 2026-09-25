@@ -10,7 +10,7 @@
   <Border Background="{DynamicResource SidebarFill}" BorderBrush="{DynamicResource DividerStroke}" BorderThickness="0,0,1,0" Padding="12,20">
    <DockPanel>
     <StackPanel DockPanel.Dock="Top" Margin="4,0,0,24">
-     <Image Source="Assets/Logo.png" Width="44" Height="44" HorizontalAlignment="Left" Margin="0,0,0,12"/>
+     <Image x:Name="BrandLogo" Width="44" Height="44" HorizontalAlignment="Left" Margin="0,0,0,12"/>
      <TextBlock Text="QPARK Shot" FontSize="19" FontWeight="SemiBold"/>
      <TextBlock Text="Windows" Foreground="{DynamicResource SecondaryText}" Margin="0,4,0,0"/>
     </StackPanel>
@@ -35,7 +35,12 @@
       <Button x:Name="CaptureButton" Content="{l:Tr capture.selected_area}" Click="OnCapture" Padding="14,8" Background="{DynamicResource QPARKAccent}" Foreground="White" AutomationProperties.AutomationId="workspace.capture"/>
       <Button Content="⌄" Click="OnCaptureMenu" Margin="4,0,0,0" AutomationProperties.Name="{l:Tr capture.with_delay}"/>
      </StackPanel>
+     <Grid>
      <TextBox x:Name="SearchBox" TextChanged="OnSearch" VerticalContentAlignment="Center" Padding="10,6" ToolTip="{l:Tr workspace.search_placeholder}" AutomationProperties.Name="{l:Tr common.search}" AutomationProperties.AutomationId="workspace.search"/>
+      <TextBlock Text="{l:Tr workspace.search_placeholder}" IsHitTestVisible="False" Margin="12,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource SecondaryText}">
+       <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+      </TextBlock>
+     </Grid>
     </DockPanel>
    </Border>
    <ContentControl x:Name="ContentHost" Grid.Row="1"/>

@@ -8,6 +8,8 @@
     <Platforms>x64</Platforms>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <UseWPF>true</UseWPF>
+    <!-- WPF owns startup and PerMonitorV2 in app.manifest; WinForms is used only for tray and dialogs. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

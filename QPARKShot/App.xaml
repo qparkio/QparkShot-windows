@@ -304,10 +304,7 @@
                 <Setter Property="Margin" Value="0,4" />
             </Style>
 
-            <!-- TextBlock Style -->
-            <Style TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{DynamicResource WindowForeground}" />
-            </Style>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>

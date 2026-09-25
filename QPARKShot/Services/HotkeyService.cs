@@ -17,7 +17,7 @@ public sealed class HotkeyService
     private HwndSource? _source;
     private IntPtr _hwnd;
     private readonly Dictionary<int, string> _idToAction = new();
-    private int _nextHotkeyId = 0xC000; // 0xC000 — start of app-private hotkey range
+    private int _nextHotkeyId = 0x4000;
 
     private HotkeyService() { }
 
@@ -98,6 +98,7 @@ public sealed class HotkeyService
             NativeMethods.UnregisterHotKey(_hwnd, id);
         }
         _idToAction.Clear();
+        _nextHotkeyId = 0x4000;
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)

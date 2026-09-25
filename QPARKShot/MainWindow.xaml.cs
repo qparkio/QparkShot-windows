@@ -26,6 +26,8 @@ public partial class MainWindow : Window
             var corner = 2; DwmSetWindowAttribute(Hwnd, 33, ref corner, sizeof(int));
             var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico");
             if (File.Exists(icon)) Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri(icon));
+            var logo = Path.Combine(AppContext.BaseDirectory, "Assets", "Logo.png");
+            if (File.Exists(logo)) BrandLogo.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(logo));
             UpdateAppearance();
         };
         Loaded += async (_, _) => { ShowGallery(); await WorkspaceStore.Shared.RefreshAsync(); };
@@ -108,7 +110,7 @@ public partial class MainWindow : Window
         _editor?.Dispose(); _editor = null;
         ShotQueueStore.Shared.ClearAll(); ShowSession(); return true;
     }
-    public bool ConfirmQuit() => (ShotQueueStore.Shared.Items.Count == 0 && !EditorDraftStore.Shared.HasUnsavedChanges) ||
+    public bool ConfirmQuit() => (!ShotQueueStore.Shared.Items.Any(i => AppPaths.IsOwnedTemporary(i.Path) && (i.ExportedPath == null || !File.Exists(i.ExportedPath))) && !EditorDraftStore.Shared.HasUnsavedChanges) ||
         MessageBox.Show(this, L.T("windows.quit_warning"), "QPARK Shot", MessageBoxButton.OKCancel, MessageBoxImage.Warning) == MessageBoxResult.OK;
     private void OnClearSession(object sender, RoutedEventArgs e) => ConfirmClearSession();
     private void OnSettings(object sender, RoutedEventArgs e) => ShowSettings();
