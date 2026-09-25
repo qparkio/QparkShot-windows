@@ -17,9 +17,18 @@ namespace QPARKShot.Services;
 /// </summary>
 public static class SelectionOverlayController
 {
-    public static Task<GdiRectangle?> SelectRegionAsync()
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct POINT { public int X, Y; }
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct RECT { public int Left, Top, Right, Bottom; }
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int width, int height, uint flags);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool GetCursorPos(out POINT point);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(POINT point);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
+    public static Task<GdiRectangle?> SelectRegionAsync(bool windowCapture = false)
     {
-        var tcs = new TaskCompletionSource<GdiRectangle?>();
+        var tcs = new TaskCompletionSource<GdiRectangle?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var bounds = ScreenInfo.VirtualScreenBounds();
 
         var window = new Window
@@ -56,7 +65,7 @@ public static class SelectionOverlayController
 
         var hint = new TextBlock
         {
-            Text = "Drag to select • ESC to cancel",
+            Text = Localization.L.T(windowCapture ? "windows.capture_window_hint" : "windows.capture_hint"),
             Foreground = new SolidColorBrush(Color.FromArgb(220, 255, 255, 255)),
             FontSize = 13,
             IsHitTestVisible = false,
@@ -97,6 +106,21 @@ public static class SelectionOverlayController
             dragging = false;
             canvas.ReleaseMouseCapture();
 
+            if (windowCapture)
+            {
+                GetCursorPos(out var cursor);
+                window.Hide();
+                var target = GetAncestor(WindowFromPoint(cursor), 2);
+                if (target != IntPtr.Zero && GetWindowRect(target, out var area))
+                {
+                    var selected = GdiRectangle.FromLTRB(area.Left, area.Top, area.Right, area.Bottom);
+                    selected.Intersect(bounds);
+                    tcs.TrySetResult(selected.Width > 0 && selected.Height > 0 ? selected : null);
+                }
+                else tcs.TrySetResult(null);
+                window.Close();
+                return;
+            }
             double x = Canvas.GetLeft(rect);
             double y = Canvas.GetTop(rect);
             double w = rect.Width;
@@ -108,13 +132,10 @@ public static class SelectionOverlayController
             }
             else
             {
-                // Convert from window-local DIPs to screen pixels using the window DPI.
-                var dpi = VisualTreeHelper.GetDpi(window);
-                int sx = bounds.X + (int)Math.Round(x * dpi.DpiScaleX);
-                int sy = bounds.Y + (int)Math.Round(y * dpi.DpiScaleY);
-                int sw = (int)Math.Round(w * dpi.DpiScaleX);
-                int sh = (int)Math.Round(h * dpi.DpiScaleY);
-                tcs.TrySetResult(new GdiRectangle(sx, sy, sw, sh));
+                var topLeft = canvas.PointToScreen(new WpfPoint(x, y));
+                var bottomRight = canvas.PointToScreen(new WpfPoint(x + w, y + h));
+                tcs.TrySetResult(GdiRectangle.FromLTRB((int)Math.Round(topLeft.X), (int)Math.Round(topLeft.Y),
+                    (int)Math.Round(bottomRight.X), (int)Math.Round(bottomRight.Y)));
             }
             window.Close();
         };
@@ -133,6 +154,8 @@ public static class SelectionOverlayController
             if (!tcs.Task.IsCompleted) tcs.TrySetResult(null);
         };
 
+        window.SourceInitialized += (_, _) => SetWindowPos(new System.Windows.Interop.WindowInteropHelper(window).Handle,
+            new IntPtr(-1), bounds.X, bounds.Y, bounds.Width, bounds.Height, 0x0040);
         window.Show();
         window.Activate();
         window.Focus();

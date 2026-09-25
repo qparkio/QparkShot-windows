@@ -28,16 +28,25 @@ public sealed class HotkeyService
         _source = HwndSource.FromHwnd(_hwnd);
         _source?.AddHook(WndProc);
         Sync();
-        SettingsStore.Shared.SettingsChanged += (_, _) => Sync();
+        SettingsStore.Shared.SettingsChanged += OnSettingsChanged;
     }
 
     public void Stop()
     {
+        SettingsStore.Shared.SettingsChanged -= OnSettingsChanged;
         UnregisterAll();
         _source?.RemoveHook(WndProc);
         _source = null;
     }
 
+    private void OnSettingsChanged(object? sender, EventArgs e) => Sync();
+    public static string? Validate(HotkeyConfig value, HotkeyConfig other)
+    {
+        if (!value.Enabled) return null;
+        if (value.Key.Length != 1 || !char.IsAsciiLetterOrDigit(value.Key[0]) || !value.Modifiers.Any(m => m is "control" or "option" or "alt" or "command" or "win")) return "settings.shortcut_invalid";
+        if (other.Enabled && value.Key.Equals(other.Key, StringComparison.OrdinalIgnoreCase) && value.Modifiers.OrderBy(m => m).SequenceEqual(other.Modifiers.OrderBy(m => m))) return "settings.shortcut_duplicate";
+        return null;
+    }
     public void Sync()
     {
         UnregisterAll();
@@ -78,6 +87,7 @@ public sealed class HotkeyService
         else
         {
             Logger.Log($"Hotkey FAILED to register: {action} (mods={mods:X} vk={vk:X})");
+            WorkspaceStore.Shared.Notify(Localization.L.T("settings.shortcut_invalid") + " · " + cfg.Key);
         }
     }
 

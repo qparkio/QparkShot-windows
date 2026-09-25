@@ -31,7 +31,11 @@ public static class WatermarkRenderer
         {
             using var g = Graphics.FromImage(working);
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            foreach (var a in annotations) DrawAnnotation(g, a);
+            foreach (var a in annotations)
+            {
+                if (a is AreaAnnotation { Blur: true } area) DrawBlur(g, working, area);
+                else DrawAnnotation(g, a);
+            }
         }
 
         // 2. Crop, if requested.
@@ -72,6 +76,24 @@ public static class WatermarkRenderer
         return working;
     }
 
+    private static void DrawBlur(Graphics target, Bitmap source, AreaAnnotation area)
+    {
+        var rect = Rectangle.Intersect(new Rectangle(0, 0, source.Width, source.Height),
+            new Rectangle((int)area.Rect.X, (int)area.Rect.Y, (int)area.Rect.Width, (int)area.Rect.Height));
+        if (rect.Width < 1 || rect.Height < 1) return;
+        using var region = source.Clone(rect, PixelFormat.Format32bppArgb);
+        using var small = new Bitmap(Math.Max(1, rect.Width / 16), Math.Max(1, rect.Height / 16));
+        using (var graphics = Graphics.FromImage(small))
+        {
+            graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
+            graphics.DrawImage(region, new Rectangle(0, 0, small.Width, small.Height));
+        }
+        var state = target.Save();
+        target.InterpolationMode = InterpolationMode.HighQualityBilinear;
+        target.DrawImage(small, rect);
+        target.Restore(state);
+    }
+
     private static void DrawAnnotation(Graphics g, Annotation a)
     {
         var color = ColorHelpers.FromHex(a.ColorHex);
@@ -79,6 +101,18 @@ public static class WatermarkRenderer
 
         switch (a)
         {
+            case AreaAnnotation area:
+                using (var fill = new SolidBrush(Color.Black))
+                    g.FillRectangle(fill, (float)area.Rect.X, (float)area.Rect.Y, (float)area.Rect.Width, (float)area.Rect.Height);
+                break;
+            case CalloutAnnotation callout:
+                var diameter = (float)Math.Max(28, callout.StrokeWidth * 6);
+                var circle = new RectangleF((float)callout.Position.X - diameter / 2, (float)callout.Position.Y - diameter / 2, diameter, diameter);
+                using (var fill = new SolidBrush(color)) g.FillEllipse(fill, circle);
+                using (var font = new Font("Segoe UI", diameter * 0.5f, FontStyle.Bold, GraphicsUnit.Pixel))
+                using (var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                    g.DrawString(callout.Number.ToString(), font, Brushes.White, circle, format);
+                break;
             case FreehandAnnotation fh when fh.Points.Count >= 2:
             {
                 var pts = new PointF[fh.Points.Count];

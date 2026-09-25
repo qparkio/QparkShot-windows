@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using QPARKShot.Helpers;
 using QPARKShot.Models;
+using QPARKShot.Services;
 using Bitmap = System.Drawing.Bitmap;
 using WpfPoint = System.Windows.Point;
 using WpfRect = System.Windows.Rect;
@@ -24,8 +25,14 @@ public partial class DrawingCanvas : UserControl
     public List<Annotation> Annotations { get; private set; } = new();
     public WpfRect? CropRect { get; private set; }
 
-    private readonly Stack<List<Annotation>> _undoStack = new();
-    private readonly Stack<List<Annotation>> _redoStack = new();
+    private EditorDraft _draft = new();
+    private Bitmap? _bitmap;
+    public event EventHandler? Changed;
+    public bool ReadOnly { get; set; }
+    public bool CanUndo => _draft.CanUndo;
+    public bool CanRedo => _draft.CanRedo;
+    public void ReleaseImage() { _bitmap?.Dispose(); _bitmap = null; BackgroundImage.Source = null; }
+    public void ClearCrop() { if (CropRect == null) return; CropRect = null; RecordUndo(); Rebuild(); }
 
     private Annotation? _activeAnnotation;
     private WpfPoint _dragStart;
@@ -36,8 +43,11 @@ public partial class DrawingCanvas : UserControl
         InitializeComponent();
     }
 
-    public void LoadImage(Bitmap bitmap)
+    public void LoadImage(Bitmap bitmap, EditorDraft? draft = null)
     {
+        ReleaseImage();
+        _bitmap = (Bitmap)bitmap.Clone();
+        _draft = draft ?? new();
         var src = BitmapHelpers.ToBitmapSource(bitmap);
         BackgroundImage.Source = src;
         ImageContainer.Width = bitmap.Width;
@@ -45,42 +55,31 @@ public partial class DrawingCanvas : UserControl
         AnnotationCanvas.Width = bitmap.Width;
         AnnotationCanvas.Height = bitmap.Height;
 
-        Annotations = new();
-        CropRect = null;
-        _undoStack.Clear();
-        _redoStack.Clear();
-        _undoStack.Push(new List<Annotation>(Annotations));
-        Rebuild();
+        Restore();
     }
 
-    public void Undo()
+    private void Restore()
     {
-        if (_undoStack.Count <= 1) return;
-        _redoStack.Push(_undoStack.Pop());
-        Annotations = new List<Annotation>(_undoStack.Peek());
+        Annotations = _draft.Current.Annotations.Select(a => a.Copy()).ToList();
+        CropRect = _draft.Current.CropRect;
         Rebuild();
+        Changed?.Invoke(this, EventArgs.Empty);
     }
-
-    public void Redo()
-    {
-        if (_redoStack.Count == 0) return;
-        var next = _redoStack.Pop();
-        _undoStack.Push(next);
-        Annotations = new List<Annotation>(next);
-        Rebuild();
-    }
-
+    public void Undo() { _draft.Undo(); Restore(); }
+    public void Redo() { _draft.Redo(); Restore(); }
     private void RecordUndo()
     {
-        _undoStack.Push(new List<Annotation>(Annotations));
-        _redoStack.Clear();
+        _draft.Record(Annotations, CropRect);
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     // ===== Pointer handlers =====
 
     private void OnMouseDown(object sender, MouseButtonEventArgs e)
     {
-        var pos = e.GetPosition(AnnotationCanvas);
+        if (ReadOnly || _bitmap == null) return;
+        var raw = e.GetPosition(AnnotationCanvas);
+        var pos = new WpfPoint(Math.Clamp(raw.X, 0, _bitmap.Width), Math.Clamp(raw.Y, 0, _bitmap.Height));
         _dragStart = pos;
 
         switch (CurrentTool)
@@ -117,6 +116,14 @@ public partial class DrawingCanvas : UserControl
                 Rebuild();
                 _activeAnnotation = null;
                 break;
+            case ToolType.Redact:
+            case ToolType.Blur:
+                _activeAnnotation = new AreaAnnotation { Rect = new WpfRect(pos.X, pos.Y, 0, 0), Blur = CurrentTool == ToolType.Blur, ColorHex = "#000000" };
+                break;
+            case ToolType.Callout:
+                Annotations.Add(new CalloutAnnotation { Position = pos, Number = Annotations.OfType<CalloutAnnotation>().Select(c => c.Number).DefaultIfEmpty(0).Max() + 1, ColorHex = CurrentColorHex, StrokeWidth = CurrentStrokeWidth });
+                RecordUndo(); Rebuild(); _activeAnnotation = null;
+                break;
             case ToolType.Select:
                 CropRect = new WpfRect(pos.X, pos.Y, 0, 0);
                 _activeAnnotation = null;
@@ -128,10 +135,15 @@ public partial class DrawingCanvas : UserControl
     private void OnMouseMove(object sender, MouseEventArgs e)
     {
         if (e.LeftButton != MouseButtonState.Pressed) return;
-        var pos = e.GetPosition(AnnotationCanvas);
+        if (ReadOnly || _bitmap == null) return;
+        var raw = e.GetPosition(AnnotationCanvas);
+        var pos = new WpfPoint(Math.Clamp(raw.X, 0, _bitmap.Width), Math.Clamp(raw.Y, 0, _bitmap.Height));
 
         switch (_activeAnnotation)
         {
+            case AreaAnnotation area:
+                area.Rect = new WpfRect(_dragStart, pos);
+                break;
             case FreehandAnnotation fh: fh.Points.Add(pos); break;
             case ArrowAnnotation arrow: arrow.End = pos; break;
             case RectangleAnnotation r:
@@ -159,6 +171,7 @@ public partial class DrawingCanvas : UserControl
 
     private void OnMouseUp(object sender, MouseButtonEventArgs e)
     {
+        if (ReadOnly) return;
         AnnotationCanvas.ReleaseMouseCapture();
         if (_activeAnnotation != null)
         {
@@ -169,6 +182,8 @@ public partial class DrawingCanvas : UserControl
         }
         else if (CurrentTool == ToolType.Select)
         {
+            if (CropRect is { Width: < 2 } || CropRect is { Height: < 2 }) CropRect = null;
+            RecordUndo();
             Rebuild();
         }
     }
@@ -178,7 +193,11 @@ public partial class DrawingCanvas : UserControl
     private void Rebuild()
     {
         AnnotationCanvas.Children.Clear();
-        foreach (var a in Annotations) AddShape(a, isPreview: false);
+        if (_bitmap != null)
+        {
+            using var rendered = WatermarkRenderer.Render(_bitmap, Annotations, null, WatermarkSettings.Disabled);
+            if (rendered != null) BackgroundImage.Source = BitmapHelpers.ToBitmapSource(rendered);
+        }
         RebuildPreview();
     }
 
@@ -216,6 +235,11 @@ public partial class DrawingCanvas : UserControl
         var brush = new SolidColorBrush(ColorHelpers.ToWpf(ColorHelpers.FromHex(a.ColorHex)));
         switch (a)
         {
+            case AreaAnnotation area:
+                var areaShape = new WpfRectangle { Width = area.Rect.Width, Height = area.Rect.Height, Fill = area.Blur ? Brushes.Gray : Brushes.Black, Opacity = area.Blur ? 0.6 : 1, Tag = PreviewTag };
+                Canvas.SetLeft(areaShape, area.Rect.X); Canvas.SetTop(areaShape, area.Rect.Y);
+                AnnotationCanvas.Children.Add(areaShape);
+                break;
             case FreehandAnnotation fh when fh.Points.Count >= 2:
             {
                 var pl = new Polyline

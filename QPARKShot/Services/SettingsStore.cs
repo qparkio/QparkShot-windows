@@ -1,85 +1,51 @@
-using System;
 using System.IO;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
+using QPARKShot.Helpers;
 using QPARKShot.Models;
-
 namespace QPARKShot.Services;
 
-/// <summary>
-/// Singleton mirror of macOS <c>SettingsStore</c>. Persists the full
-/// <see cref="AppSettings"/> blob to <c>%APPDATA%\QPARK Shot\settings.json</c>.
-/// </summary>
 public sealed class SettingsStore : ObservableObject
 {
     public static SettingsStore Shared { get; } = new();
-
-    private static readonly string SettingsDir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "QPARK Shot");
-    private static readonly string SettingsPath = Path.Combine(SettingsDir, "settings.json");
-
-    private AppSettings _settings = new();
-    public AppSettings Settings
-    {
-        get => _settings;
-        private set => SetProperty(ref _settings, value);
-    }
-
+    private readonly string _path;
+    public AppSettings Settings { get; private set; } = new();
     public event EventHandler? SettingsChanged;
-
-    private SettingsStore()
+    public string? LastError { get; private set; }
+    public SettingsStore(string? path = null)
     {
+        _path = path ?? Path.Combine(AppPaths.SettingsDirectory, "settings.json");
         Load();
     }
-
     public void Load()
     {
-        try
+        foreach (var path in new[] { _path, _path + ".bak" })
         {
-            if (File.Exists(SettingsPath))
+            if (!File.Exists(path)) continue;
+            try
             {
-                var json = File.ReadAllText(SettingsPath);
-                var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOpts());
-                if (loaded != null)
-                {
-                    Settings = loaded;
-                    OnPropertyChanged(string.Empty);
-                    SettingsChanged?.Invoke(this, EventArgs.Empty);
-                }
+                Settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), JsonFile.Options) ?? new();
+                Settings.Watermark ??= new(); Settings.Watermark.Text ??= new(); Settings.Watermark.Logo ??= new();
+                Settings.Cleanup ??= new(); Settings.Queue ??= new(); Settings.Capture ??= new();
+                Settings.Hotkey ??= new(); Settings.FullScreenHotkey ??= new();
+                Settings.Export ??= new(); Settings.Gallery ??= new(); Settings.Localization ??= new();
+                Settings.Hotkey.Modifiers ??= new(); Settings.FullScreenHotkey.Modifiers ??= new();
+                Settings.Localization.TextRecognitionLanguageCodes ??= new() { "en" };
+                return;
             }
-        }
-        catch
-        {
-            // ignore — keep defaults
+            catch (Exception ex) { LastError = ex.Message; Logger.LogException("Settings load", ex); }
         }
     }
-
     public void Save()
     {
         try
         {
-            Directory.CreateDirectory(SettingsDir);
-            var json = JsonSerializer.Serialize(Settings, JsonOpts());
-            File.WriteAllText(SettingsPath, json);
+            JsonFile.Save(_path, Settings);
+            LastError = null;
             OnPropertyChanged(nameof(Settings));
             SettingsChanged?.Invoke(this, EventArgs.Empty);
         }
-        catch
-        {
-            // best-effort
-        }
+        catch (Exception ex) { LastError = ex.Message; Logger.LogException("Settings save", ex); throw; }
     }
-
-    /// <summary>Same approach as macOS: mutate, call <c>Save()</c>.</summary>
-    public void Mutate(Action<AppSettings> mutator)
-    {
-        mutator(Settings);
-        Save();
-    }
-
-    private static JsonSerializerOptions JsonOpts() => new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
+    public void Mutate(Action<AppSettings> mutator) { mutator(Settings); Save(); }
 }

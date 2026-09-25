@@ -1,63 +1,65 @@
 name: Build Windows
-
 on:
   push:
-    branches: [main]
+    branches: [main, 'codex/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
-
+    inputs:
+      identity_name:
+        description: 'Partner Center Package/Identity/Name (optional; all three values required for Store)'
+        type: string
+      publisher:
+        description: 'Partner Center Package/Identity/Publisher'
+        type: string
+      publisher_display_name:
+        description: 'Partner Center Package/Properties/PublisherDisplayName'
+        type: string
+permissions:
+  contents: read
 jobs:
   build:
-    runs-on: windows-latest
-
+    runs-on: windows-2022
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
-      - name: Restore
-        run: dotnet restore QPARKShot.sln
-
-      - name: Publish (self-contained, win-x64)
+      - name: Regression and WPF layout checks
+        shell: pwsh
         run: |
-          dotnet publish QPARKShot/QPARKShot.csproj `
-            -c Release -r win-x64 --self-contained true `
-            -p:PublishReadyToRun=false -p:PublishSingleFile=false `
-            -o build/Release
-          if ($LASTEXITCODE -ne 0) { throw "publish failed" }
-
-      - name: Show output size
+          dotnet run --project QPARKShot.Tests/QPARKShot.Tests.csproj -c Release -- build/QA
+          if ($LASTEXITCODE -ne 0) { throw 'Regression tests failed.' }
+      - name: Publish Windows x64
+        shell: pwsh
         run: |
-          $size = (Get-ChildItem -Recurse build/Release | Measure-Object Length -Sum).Sum / 1MB
-          Write-Host ("Total: {0:N1} MB" -f $size)
-          $folders = (Get-ChildItem build/Release -Directory).Count
-          $files = (Get-ChildItem build/Release -File).Count
-          Write-Host "Folders: $folders, Files (top-level): $files"
-
-      - name: Install NSIS
-        run: choco install nsis -y --no-progress
-
-      - name: Build NSIS installer
-        run: |
-          New-Item -ItemType Directory -Force -Path build/Installer | Out-Null
-          & 'C:\Program Files (x86)\NSIS\makensis.exe' /V2 scripts/installer.nsi
-          if ($LASTEXITCODE -ne 0) { throw "makensis failed" }
-          Get-ChildItem build/Installer | Format-Table -AutoSize
-
-      - name: Upload installer
+          dotnet publish QPARKShot/QPARKShot.csproj -c Release -r win-x64 --self-contained true -o build/Release
+          if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
+          dotnet publish QPARKShot.Tests/QPARKShot.Tests.csproj -c Release -r win-x64 --self-contained true -o build/Tests
+          if ($LASTEXITCODE -ne 0) { throw 'Test harness publish failed.' }
+      - name: Package MSIX preview
+        shell: pwsh
+        run: ./scripts/build-msix.ps1 -TestPackage
+      - name: Package for Microsoft Store
+        if: ${{ inputs.identity_name != '' }}
+        env:
+          STORE_IDENTITY: ${{ inputs.identity_name }}
+          STORE_PUBLISHER: ${{ inputs.publisher }}
+          STORE_DISPLAY_NAME: ${{ inputs.publisher_display_name }}
+        shell: pwsh
+        run: ./scripts/build-msix.ps1 -OutputDirectory build/Store -IdentityName $env:STORE_IDENTITY -Publisher $env:STORE_PUBLISHER -PublisherDisplayName $env:STORE_DISPLAY_NAME
+      - name: Install MSIX and smoke test
+        shell: pwsh
+        run: ./scripts/test-msix.ps1
+      - name: Upload packages and evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: QPARKShot-Setup
-          path: build/Installer/QPARKShot-Setup-*.exe
-          if-no-files-found: error
-
-      - name: Upload portable build
-        uses: actions/upload-artifact@v4
-        with:
-          name: QPARKShot-Windows-Portable
-          path: build/Release/**
-          if-no-files-found: error
+          name: QPARKShot-Windows-1.2.0
+          path: |
+            build/MSIX/*.msix
+            build/MSIX/*.cer
+            build/Store/*.msix
+            build/QA/**
+          if-no-files-found: warn

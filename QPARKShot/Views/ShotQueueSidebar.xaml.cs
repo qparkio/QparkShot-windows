@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using QPARKShot.Helpers;
 using QPARKShot.Models;
+using QPARKShot.Localization;
 using QPARKShot.Services;
 
 namespace QPARKShot.Views;
@@ -20,9 +21,12 @@ public partial class ShotQueueSidebar : UserControl
     public ShotQueueSidebar()
     {
         InitializeComponent();
-        ShotQueueStore.Shared.Items.CollectionChanged += OnItemsChanged;
-        ShotQueueStore.Shared.PropertyChanged += OnStorePropertyChanged;
-        Loaded += (_, _) => Rebuild();
+        Loaded += (_, _) =>
+        {
+            ShotQueueStore.Shared.Items.CollectionChanged += OnItemsChanged;
+            ShotQueueStore.Shared.PropertyChanged += OnStorePropertyChanged;
+            Rebuild();
+        };
         Unloaded += (_, _) =>
         {
             ShotQueueStore.Shared.Items.CollectionChanged -= OnItemsChanged;
@@ -41,7 +45,7 @@ public partial class ShotQueueSidebar : UserControl
 
     private void Rebuild()
     {
-        HeaderText.Text = $"Buffer · {ShotQueueStore.Shared.Items.Count}";
+        HeaderText.Text = L.T("workspace.current_session") + $" · {ShotQueueStore.Shared.Items.Count}";
         ClearAllButton.Visibility = ShotQueueStore.Shared.Items.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
         QueueItems.Items.Clear();
@@ -96,7 +100,7 @@ public partial class ShotQueueSidebar : UserControl
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(4),
                 Margin = new Thickness(0, 0, 4, 0),
-                ToolTip = "Preview with watermark",
+                ToolTip = L.T("common.preview"),
             };
             previewBtn.Click += (_, _) => PreviewWatermark(item);
             hoverActions.Children.Add(previewBtn);
@@ -108,9 +112,9 @@ public partial class ShotQueueSidebar : UserControl
             Background = new SolidColorBrush(Color.FromArgb(0xFF, 0xD1, 0x30, 0x30)),
             BorderThickness = new Thickness(0),
             Padding = new Thickness(4),
-            ToolTip = "Remove from buffer",
+            ToolTip = L.T("common.delete"),
         };
-        deleteBtn.Click += (_, _) => DeleteItem(item);
+        deleteBtn.Click += (_, e) => { e.Handled = true; DeleteItem(item); };
         hoverActions.Children.Add(deleteBtn);
 
         thumbGrid.Children.Add(hoverActions);
@@ -169,7 +173,8 @@ public partial class ShotQueueSidebar : UserControl
         var bmp = await Task.Run(() => BitmapHelpers.LoadBitmap(item.Path));
         if (bmp == null) return;
         var ws = WatermarkSettings.FromStore(SettingsStore.Shared);
-        var rendered = await Task.Run(() => WatermarkRenderer.Render(bmp, Array.Empty<Annotation>(), null, ws));
+        var snapshot = EditorDraftStore.Shared.For(item.Id).Current;
+        var rendered = await Task.Run(() => ImageExportService.Render(bmp, snapshot, SettingsStore.Shared.Settings.Export.SelectedPresetID, ws));
         bmp.Dispose();
         if (rendered == null) return;
 
@@ -200,6 +205,7 @@ public partial class ShotQueueSidebar : UserControl
 
     private void DeleteItem(ShotQueueItem item)
     {
+        if (MessageBox.Show(Window.GetWindow(this), L.T("windows.remove_warning"), "QPARK Shot", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK) return;
         var wasActive = (ShotQueueStore.Shared.ActiveId == item.Id);
         var nextId = ShotQueueStore.Shared.Remove(item.Id);
         if (wasActive)
@@ -211,16 +217,7 @@ public partial class ShotQueueSidebar : UserControl
 
     private void OnClearAll(object sender, RoutedEventArgs e)
     {
-        var result = MessageBox.Show(
-            $"All {ShotQueueStore.Shared.Items.Count} screenshots will be removed from the buffer. " +
-            "Files saved to Pictures are not affected.",
-            "Clear buffer?",
-            MessageBoxButton.OKCancel,
-            MessageBoxImage.Warning);
-        if (result == MessageBoxResult.OK)
-        {
-            ShotQueueStore.Shared.ClearAll();
-            App.MainWindowInstance?.ShowGallery();
-        }
+        App.MainWindowInstance?.ConfirmClearSession();
+
     }
 }

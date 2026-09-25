@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <RootNamespace>QPARKShot</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x64</Platforms>
@@ -13,9 +14,9 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>QPARKShot</AssemblyName>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
-    <Version>1.1.0</Version>
-    <FileVersion>1.1.0</FileVersion>
-    <AssemblyVersion>1.1.0</AssemblyVersion>
+    <Version>1.2.0</Version>
+    <FileVersion>1.2.0</FileVersion>
+    <AssemblyVersion>1.2.0</AssemblyVersion>
     <Product>QPARK Shot</Product>
     <Company>QPARK</Company>
     <Copyright>Copyright © 2026 QPARK</Copyright>
@@ -24,6 +25,8 @@
     <PublishSingleFile>false</PublishSingleFile>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
+
+  <ItemGroup><InternalsVisibleTo Include="QPARKShot.Tests" /></ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
@@ -39,6 +42,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Localization\strings.json" />
     <Content Include="Assets\AppIcon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

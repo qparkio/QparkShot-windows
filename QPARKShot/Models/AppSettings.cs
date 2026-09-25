@@ -15,6 +15,9 @@ public sealed class AppSettings
     public CleanupConfig Cleanup { get; set; } = new();
     public QueueConfig Queue { get; set; } = new();
     public CaptureConfig Capture { get; set; } = new();
+    public ExportConfig Export { get; set; } = new();
+    public GalleryConfig Gallery { get; set; } = new();
+    public LocalizationConfig Localization { get; set; } = new();
 }
 
 public sealed class HotkeyConfig
@@ -66,5 +69,27 @@ public sealed class QueueConfig
 public sealed class CaptureConfig
 {
     public string Mode { get; set; } = "selection";          // selection | fullScreen
+    public System.Drawing.Rectangle? LastRegion { get; set; }
     public int DelaySeconds { get; set; } = 0;                // 0, 3, 5, 10
+}
+
+public sealed class ExportConfig
+{
+    public string SelectedPresetID { get; set; } = "watermarked";
+    public string FilenameTemplate { get; set; } = "{date}_{time}_{preset}";
+    public string DefaultQuickAction { get; set; } = "edit";
+}
+public sealed class GalleryConfig
+{
+    public bool OcrEnabled { get; set; } = true;
+    public bool SearchIndexEnabled { get; set; } = true;
+}
+public sealed class LocalizationConfig
+{
+    public string AppLanguageCode { get; set; } = LocalLanguage();
+    public List<string> TextRecognitionLanguageCodes { get; set; } = new() { LocalLanguage(), "en" };
+    private static string LocalLanguage() => System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName switch
+    {
+        "zh" => "zh-Hans", "pt" => "pt-BR", var code => code
+    };
 }
