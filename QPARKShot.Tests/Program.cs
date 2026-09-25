@@ -161,17 +161,53 @@ internal static class Program
             SettingsStore.Shared.Settings.Localization.TextRecognitionLanguageCodes = new() { "en" };
             var text = await OcrService.RecognizeAsync(path, CancellationToken.None);
             Check(text.Contains("QPARK", StringComparison.OrdinalIgnoreCase), "installed MSIX recognizes local fixture with Windows OCR");
+            await SaveStoreScreenshotsAsync(window, first, second, text);
         }
         else Check(!OcrService.HasPackageIdentity, "unpackaged build reports OCR identity requirement");
         window.IsQuitting = true; window.Close();
         Check(!Directory.Exists(Path.Combine(AppPaths.TestRoot!, "..", "outside")), "QA uses isolated application data");
     }
-    private static async Task SaveWindowAsync(Window window, string name)
+    private static async Task SaveStoreScreenshotsAsync(MainWindow window, ShotQueueItem first, ShotQueueItem second, string recognizedText)
+    {
+        WorkspaceStore.Shared.Stop();
+        SettingsStore.Shared.Settings.Gallery.OcrEnabled = true;
+        SettingsStore.Shared.Settings.ThemePreference = "dark";
+        App.ApplyTheme("dark");
+        window.Width = 1440; window.Height = 900;
+        // Use only the generated fixtures; no customer files are included in Store assets.
+        var library = GalleryIndexStore.Shared;
+        foreach (var key in library.Entries.Keys.Where(key => key != first.Path && key != second.Path).ToArray())
+            library.Entries.Remove(key);
+        foreach (var entry in library.Entries.Values)
+        { entry.OcrText = recognizedText; entry.OcrStatus = "ready"; entry.OcrError = null; }
+        library.Entries[first.Path].Favorite = true;
+        library.Entries[first.Path].Tags = new() { "notes", "support" };
+        EditorDraftStore.Shared.For(first.Id).Record(new Annotation[]
+        {
+            new RectangleAnnotation { Rect = new Rect(40, 86, 515, 62), ColorHex = "#0A84FF", StrokeWidth = 4 },
+            new ArrowAnnotation { Start = new(630, 270), End = new(490, 205), ColorHex = "#FF6B45", StrokeWidth = 5 },
+            new CalloutAnnotation { Position = new(610, 100), Number = 1, ColorHex = "#0A84FF", StrokeWidth = 5 },
+        }, null);
+        foreach (var code in L.Languages)
+        {
+            var directory = Path.Combine(_output, "store", code); Directory.CreateDirectory(directory);
+            SettingsStore.Shared.Settings.Localization.AppLanguageCode = code;
+            window.UpdateAppearance(); WorkspaceStore.Shared.Notify("");
+            WorkspaceStore.Shared.Section = "library"; WorkspaceStore.Shared.Search = ""; WorkspaceStore.Shared.SelectedPath = first.Path;
+            window.ShowGallery();
+            await SaveWindowAsync(window, Path.Combine("store", code, "01-library"), 2);
+            window.ShowEditor(first.Id); await Task.Delay(150);
+            await SaveWindowAsync(window, Path.Combine("store", code, "02-editor"), 2);
+            window.ShowReview(first.Id); await Task.Delay(150);
+            await SaveWindowAsync(window, Path.Combine("store", code, "03-review"), 2);
+        }
+    }
+    private static async Task SaveWindowAsync(Window window, string name, double scale = 1)
     {
         await Task.Delay(150); window.UpdateLayout();
         // Include the root Window so inherited RTL transforms and translucent brushes
         // are composed against the actual window background.
-        var bitmap = new RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+        var bitmap = new RenderTargetBitmap((int)(window.ActualWidth * scale), (int)(window.ActualHeight * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
         var background = new DrawingVisual();
         using (var drawing = background.RenderOpen())
             drawing.DrawRectangle(window.Background, null, new Rect(0, 0, window.ActualWidth, window.ActualHeight));
