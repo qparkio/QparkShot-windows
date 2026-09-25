@@ -30,7 +30,11 @@ public partial class MainWindow : Window
             if (File.Exists(logo)) BrandLogo.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(logo));
             UpdateAppearance();
         };
-        Loaded += async (_, _) => { ShowGallery(); await WorkspaceStore.Shared.RefreshAsync(); };
+        Loaded += async (_, _) =>
+        {
+            ShowGallery(); await WorkspaceStore.Shared.RefreshAsync();
+            if (SettingsStore.Shared.Settings.Cleanup.Mode == "afterDuration") { await CleanupService.PerformAsync(); await WorkspaceStore.Shared.RefreshAsync(); }
+        };
         WorkspaceStore.Shared.Changed += OnWorkspaceChanged;
         SettingsStore.Shared.SettingsChanged += OnSettingsChanged;
         PreviewKeyDown += OnKeyDown;

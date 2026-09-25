@@ -2,10 +2,10 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 $qa = New-Item -ItemType Directory -Force build/QA
-$certificate = Import-Certificate -FilePath build/MSIX/QPARKShot-Test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+$certificate = Import-Certificate -FilePath build/MSIX-QA/QPARKShot-Test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
 $package = $null
 try {
-    Add-AppxPackage -Path build/MSIX/QPARKShot-1.2.0-x64-Preview.msix
+    Add-AppxPackage -Path build/MSIX-QA/QPARKShot-1.2.0-x64-Preview.msix
     $package = Get-AppxPackage -Name QPARK.Shot.Preview
     if (!$package) { throw 'Package registration was not found.' }
     $manifest = Get-AppxPackageManifest $package

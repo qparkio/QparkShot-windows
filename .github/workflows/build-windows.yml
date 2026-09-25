@@ -38,9 +38,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
           dotnet publish QPARKShot.Tests/QPARKShot.Tests.csproj -c Release -r win-x64 --self-contained true -o build/Tests
           if ($LASTEXITCODE -ne 0) { throw 'Test harness publish failed.' }
-      - name: Package MSIX preview
+      - name: Package MSIX validation build
         shell: pwsh
-        run: ./scripts/build-msix.ps1 -TestPackage
+        run: ./scripts/build-msix.ps1 -TestPackage -IncludeTests -OutputDirectory build/MSIX-QA
       - name: Package for Microsoft Store
         if: ${{ inputs.identity_name != '' }}
         env:
@@ -52,6 +52,9 @@ jobs:
       - name: Install MSIX and smoke test
         shell: powershell
         run: ./scripts/test-msix.ps1
+      - name: Package MSIX preview
+        shell: pwsh
+        run: ./scripts/build-msix.ps1 -TestPackage
       - name: Upload packages and evidence
         if: always()
         uses: actions/upload-artifact@v4

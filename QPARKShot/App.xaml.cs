@@ -11,6 +11,7 @@ public partial class App : Application
 {
     public static MainWindow? MainWindowInstance { get; internal set; }
     private static System.Threading.Mutex? _appMutex;
+    private System.Windows.Threading.DispatcherTimer? _cleanupTimer;
     public static bool IsDarkTheme { get; private set; }
 
     public App()
@@ -120,11 +121,15 @@ public partial class App : Application
             Logger.LogException("TrayIconService.Start", ex);
         }
 
+        _cleanupTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(10) };
+        _cleanupTimer.Tick += async (_, _) => { await CleanupService.PerformAsync(); await WorkspaceStore.Shared.RefreshAsync(); };
+        _cleanupTimer.Start();
         Logger.Log("OnStartup: end (success)");
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _cleanupTimer?.Stop();
         WorkspaceStore.Shared.Stop();
         Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnSystemPreferenceChanged;
         try { HotkeyService.Shared.Stop(); } catch { }

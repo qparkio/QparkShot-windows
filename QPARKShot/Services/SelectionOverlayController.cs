@@ -154,7 +154,7 @@ public static class SelectionOverlayController
             if (!tcs.Task.IsCompleted) tcs.TrySetResult(null);
         };
 
-        window.SourceInitialized += (_, _) => SetWindowPos(new System.Windows.Interop.WindowInteropHelper(window).Handle,
+        window.Loaded += (_, _) => SetWindowPos(new System.Windows.Interop.WindowInteropHelper(window).Handle,
             new IntPtr(-1), bounds.X, bounds.Y, bounds.Width, bounds.Height, 0x0040);
         window.Show();
         window.Activate();

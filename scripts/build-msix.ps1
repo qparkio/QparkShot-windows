@@ -4,7 +4,8 @@ param(
     [string]$IdentityName,
     [string]$Publisher,
     [string]$PublisherDisplayName,
-    [switch]$TestPackage
+    [switch]$TestPackage,
+    [switch]$IncludeTests
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -33,7 +34,7 @@ $manifest.Package.Identity.Publisher = $Publisher
 $manifest.Package.Properties.DisplayName = $displayName
 $manifest.Package.Properties.PublisherDisplayName = $PublisherDisplayName
 $manifest.Package.Applications.Application.VisualElements.DisplayName = $displayName
-if ($TestPackage) {
+if ($TestPackage -and $IncludeTests) {
     Copy-Item 'build/Tests' "$stage/tests" -Recurse -Force
     $testApp = $manifest.Package.Applications.Application.CloneNode($true)
     $testApp.Id = 'RegressionTests'

@@ -6,9 +6,9 @@ namespace QPARKShot.Services;
 public static class CleanupService
 {
     private static bool _running;
-    public static Task PerformAsync()
+    public static async Task PerformAsync()
     {
-        if (_running || SettingsStore.Shared.Settings.Cleanup.Mode != "afterDuration") return Task.CompletedTask;
+        if (_running || SettingsStore.Shared.Settings.Cleanup.Mode != "afterDuration") return;
         _running = true;
         try
         {
@@ -21,6 +21,7 @@ public static class CleanupService
                 if (!Directory.Exists(folder)) continue;
                 foreach (var path in Directory.GetFiles(folder, "*.png"))
                 {
+                    await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background);
                     if (ShotQueueStore.Shared.Items.Any(i => i.Path.Equals(path, StringComparison.OrdinalIgnoreCase))) continue;
                     if (GalleryIndexStore.Shared.Entries.TryGetValue(path, out var entry) && entry.Favorite) continue;
                     if (File.GetLastWriteTimeUtc(path) >= limit) continue;
@@ -35,6 +36,6 @@ public static class CleanupService
         }
         catch (Exception ex) { Logger.LogException("Cleanup folder", ex); WorkspaceStore.Shared.Notify(ex.Message); }
         finally { _running = false; }
-        return Task.CompletedTask;
+        return;
     }
 }
