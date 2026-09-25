@@ -13,13 +13,13 @@
    <TextBlock x:Name="EmptyState" Grid.Row="1" Text="{l:Tr workspace.no_shots}" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="380"/>
    <ListBox x:Name="GalleryItems" Grid.Row="1" SelectionChanged="OnSelectionChanged" MouseDoubleClick="OnOpen" KeyDown="OnListKey" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" AutomationProperties.AutomationId="workspace.items">
     <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ListBox.ItemsPanel>
-    <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Padding" Value="6"/><Setter Property="Margin" Value="0,0,8,8"/><Setter Property="AutomationProperties.Name" Value="{Binding FileName}"/></Style></ListBox.ItemContainerStyle>
+    <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}"><Setter Property="Padding" Value="6"/><Setter Property="Margin" Value="0,0,8,8"/><Setter Property="AutomationProperties.Name" Value="{Binding FileName}"/></Style></ListBox.ItemContainerStyle>
     <ListBox.ItemTemplate><DataTemplate>
      <StackPanel Width="210">
       <Border Height="134" Background="{DynamicResource CardFill}" CornerRadius="10" ClipToBounds="True">
        <Image Source="{Binding Path, Converter={StaticResource Thumbnail}}" Stretch="Uniform" FlowDirection="LeftToRight"/>
       </Border>
-      <TextBlock Text="{Binding FileName}" Margin="0,9,0,3" TextTrimming="CharacterEllipsis"/>
+      <TextBlock Text="{Binding FileName}" FlowDirection="LeftToRight" Margin="0,9,0,3" TextTrimming="CharacterEllipsis"/>
       <StackPanel Orientation="Horizontal">
        <TextBlock Text="★ " Foreground="{DynamicResource QPARKAccent}"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Favorite}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
        <TextBlock Text="{Binding CreatedAt, StringFormat={}{0:g}}" Foreground="{DynamicResource SecondaryText}" FontSize="11"/>
