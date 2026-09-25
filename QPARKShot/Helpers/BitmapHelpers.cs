@@ -27,7 +27,7 @@ public static class BitmapHelpers
             int w = src.Width;
             int h = src.Height;
             double scale = (double)maxPixelSize / Math.Max(w, h);
-            if (scale >= 1.0) return src;
+            if (scale >= 1.0) return (Bitmap)src.Clone();
             int tw = Math.Max(1, (int)(w * scale));
             int th = Math.Max(1, (int)(h * scale));
             var thumb = new Bitmap(tw, th, PixelFormat.Format32bppArgb);

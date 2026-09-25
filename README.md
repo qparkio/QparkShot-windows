@@ -4,173 +4,96 @@
 
 <h1 align="center">QPARK Shot for Windows</h1>
 
-<p align="center">
-  Native Windows screenshot capture, annotation, watermarking, and local gallery app built with C#, WPF, and .NET 8.
-</p>
+<p align="center">Native screenshot capture, annotation, watermarking and a searchable local library. C#, WPF and .NET 8.</p>
 
-<p align="center">
-  <img alt="Windows" src="https://img.shields.io/badge/Windows-10%201809%2B%20%2F%2011-0078D4">
-  <img alt=".NET" src="https://img.shields.io/badge/.NET-8-512BD4">
-  <img alt="WPF" src="https://img.shields.io/badge/WPF-Native-blueviolet">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.1.0-blue">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
-</p>
+## Windows 1.2
 
-## Overview
+The 1.2 source update brings the current macOS workspace and editing workflow to Windows. The published GitHub release is still the older 1.1.0 NSIS installer; 1.2 MSIX Preview builds are available as GitHub Actions artifacts. Store submission and certification are separate steps.
 
-QPARK Shot is a local-first screenshot utility for Windows. It runs from the system tray, captures selected areas or the full screen, opens captures in an editor, and lets you annotate, crop, watermark, copy, share, or save the final PNG.
+### Capture and edit
 
-The app is intentionally simple from an infrastructure point of view: no analytics SDKs, no ad networks, no backend services, and no third-party runtime dependencies.
+- Capture a selected area, the primary screen, a window or the last selected area, with an optional delay.
+- Configure global shortcuts for area and full-screen capture. Invalid, duplicate and unavailable shortcuts are reported.
+- Keep multiple captures in the current session and switch between independent editing drafts.
+- Draw freehand, arrows, rectangles and text; add numbered callouts, opaque redaction or blur.
+- Crop with undo/redo shared across crop and annotations.
+- Preview, copy, pin above other windows, share through Windows Share or save the rendered PNG.
+- Choose clean, watermarked or support export presets and a filename template. Existing files are never overwritten.
 
-## Features
+### Workspace and library
 
-### Capture
+- Library, Current Session, Favorites, Recent and Missing sections with a file inspector.
+- Search filenames, tags and text recognized locally by Windows OCR.
+- Keep favorites, tags and missing-file metadata; locate moved files without losing metadata.
+- Return from the editor without losing the library search or per-image draft.
+- Open settings in a separate window.
+- Send saved files to the Recycle Bin. Scheduled cleanup protects active captures and favorites.
 
-- Capture a selected screen area with a built-in transparent overlay.
-- Capture the full screen from the tray-icon menu or an optional global hotkey.
-- Add a capture delay of 3, 5, or 10 seconds.
-- Configure separate hotkeys for selection capture and full-screen capture.
+### Appearance and watermark
 
-### Edit
-
-- Draw freehand lines, arrows, rectangles, and text annotations.
-- Crop screenshots before export.
-- Undo and redo annotation changes.
-- Preview the exported image before saving.
-- Copy the final image directly to the clipboard.
-- Share the final image through the native Windows "Open with…" dialog.
-
-### Watermark
-
-- Add a text watermark with configurable color, opacity, size, and position.
-- Add a logo watermark from a user-selected image file.
-- Use a single-position watermark or a tiled diagonal layout.
-- Preview watermark output live in Preferences before saving.
-
-### Gallery and Storage
-
-- Save PNG files to `%USERPROFILE%\Pictures\QPARK Shot` by default.
-- Choose a custom save folder in Preferences.
-- Browse recent screenshots in a local gallery.
-- Open, copy, share, drag, or delete saved screenshots from the gallery.
-- Keep current-session captures in an optional editor buffer sidebar.
-- Automatically clean temporary files based on local cleanup preferences.
-
-### Appearance
-
-- Light, Dark, and System themes that follow the current Windows mode.
-- Mica backdrop and rounded corners on Windows 11 22H2 or later.
-- Close-to-tray behaviour: closing the window minimizes to the tray; real quit via the tray-icon menu.
-- Single-instance enforcement: a second launch focuses the existing one instead of opening a duplicate.
+- Light, Dark and System themes; updated QPARK Shot branding.
+- Core interface translations in 12 languages, including Russian and Arabic. Windows-specific help text falls back to English where a translation is absent.
+- Text and logo watermarks with position, opacity, size and diagonal tiling controls.
+- Live watermark preview and consistent rendering for all export actions.
+- Close the window to keep the app in the tray; use Quit to exit. Unsaved captures/drafts prompt before quitting.
 
 ## Requirements
 
 - Windows 10 version 1809 (build 17763) or later, x64.
-- .NET 8 SDK (only for building from source — the installer ships a self-contained runtime).
-- Visual Studio 2022 (any edition) or the `dotnet` CLI in PowerShell 7.
-- NSIS 3.x (only to rebuild the installer locally — `choco install nsis`).
+- Packaged installation and installed Windows OCR language components for local text recognition.
+- .NET 8 SDK and Windows SDK to build from source on Windows. The delivered MSIX includes the .NET runtime.
 
-## Install
+Multi-monitor capture, mixed DPI, native sharing and the transition from an existing NSIS installation require interactive validation on a Windows client before public release. See [verification boundaries](docs/windows-1.2-port.md).
 
-The easiest way is the prebuilt installer:
+## Build from a Mac
 
-1. Download `QPARKShot-Setup-1.1.0.exe` from the [latest release](https://github.com/qparkio/QparkShot-windows/releases/latest).
-2. Run it. The installer is per-user and does not require administrator rights.
-3. The app is installed into `%LOCALAPPDATA%\Programs\QPARK Shot\` with Start Menu and Desktop shortcuts.
+Edit on macOS and push to a `codex/**` branch. The [Build Windows workflow](.github/workflows/build-windows.yml) compiles and tests on Windows Server 2022, installs an internal MSIX for launch/OCR checks, and uploads a clean Preview plus QA evidence. Download the `QPARKShot-Windows-1.2.0` artifact from that run.
 
-To uninstall, use **Settings → Apps → Installed apps → QPARK Shot → Uninstall**.
+The Preview uses a test identity and a self-signed certificate. It is intended for a dedicated Windows test account. The downloadable `.cer` contains only the public certificate. Follow the [MSIX build and installation guide](docs/msix.md).
 
-## Build and Run
+For a Microsoft Store package, supply the three exact Product identity values from Partner Center to the workflow. The Store MSIX is unsigned for upload; Microsoft signs it after certification. No paid signing certificate is needed for this Store-only route. Preview packages are not Store submissions.
 
-Open the solution in Visual Studio 2022:
+## Build on Windows
 
-```text
-QPARKShot.sln
-```
-
-Select the **QPARKShot** project and press **F5**.
-
-Command-line release build (self-contained, win-x64):
+Open `QPARKShot.sln` in Visual Studio 2022, or run:
 
 ```powershell
-dotnet restore QPARKShot.sln
-dotnet publish QPARKShot\QPARKShot.csproj `
-  -c Release -r win-x64 --self-contained true `
-  -o build\Release
+dotnet run --project QPARKShot.Tests/QPARKShot.Tests.csproj -c Release -- build/QA
+dotnet publish QPARKShot/QPARKShot.csproj -c Release -r win-x64 --self-contained true -o build/Release
+./scripts/build-msix.ps1 -TestPackage
 ```
 
-Generated build output is written under `./build`, which is ignored by Git.
+Generated output is under `build/`, ignored by Git. The regression harness uses isolated settings and image folders. The CI artifact includes results and WPF-rendered interface screenshots.
 
-### Build the installer
+The legacy NSIS script remains available in `scripts/installer.nsi` for an ordinary installer. It is not built by the MSIX workflow, and an unpackaged executable cannot use the Windows OCR API.
 
-```powershell
-choco install nsis -y
-mkdir build\Installer
-& 'C:\Program Files (x86)\NSIS\makensis.exe' /V2 scripts\installer.nsi
-# → build\Installer\QPARKShot-Setup-1.1.0.exe
-```
+## Data and privacy
 
-The GitHub Actions workflow `.github/workflows/build-windows.yml` automates both steps on every push and uploads the installer as a build artifact.
+Screenshots and recognized text stay on the PC. There is no analytics SDK, account, backend or external OCR service. Sharing starts only when the user chooses the Windows Share action.
 
-## Permissions
+- Saved PNGs: `%USERPROFILE%\Pictures\QPARK Shot`, or a user-selected directory.
+- Temporary captures: the app-owned `%TEMP%\QPARK Shot` directory.
+- Settings and library index: `%APPDATA%\QPARK Shot\settings.json` and `library-index.json`, subject to MSIX AppData virtualization.
+- Diagnostic log: `%TEMP%\qparkshot-debug.log`.
 
-QPARK Shot does not require administrator rights or any special permissions on Windows. Screen capture uses the standard `BitBlt` GDI API, which works for any process running in the current user session.
+Existing Windows 1.1 settings fields are preserved, new settings receive defaults, and JSON writes retain a backup. PNGs stay at their existing paths. Per-image editing drafts belong to the current running session and are not persisted after quitting. The complete macOS settings file is not a portable Windows configuration.
 
-Global hotkeys are registered with `RegisterHotKey` (Win32) and may silently fail to register if the chosen combination is already claimed by another application (for example, Windows Snip & Sketch on `Win+Shift+S`). If this happens, change the shortcut in **Preferences → Hotkeys**.
-
-## Privacy
-
-Screenshots stay on the user's PC. QPARK Shot does not collect personal data, does not include analytics, and does not transmit captured screen content.
-
-Saved screenshots are written locally to `%USERPROFILE%\Pictures\QPARK Shot` unless the user chooses another folder. Temporary captures are stored in `%TEMP%` and can be cleared by the app's cleanup preferences.
-
-Application settings are persisted in `%APPDATA%\QPARK Shot\settings.json`. The schema is identical to the macOS version, so the file is portable between OSes.
-
-## Diagnostics
-
-If the app misbehaves, look at the debug log:
+## Project structure
 
 ```text
-%TEMP%\qparkshot-debug.log
+QPARKShot/                 WPF application, services, models and localized resources
+QPARKShot.Tests/           Windows STA regression and UI evidence harness
+packaging/                 MSIX manifest template and public logo assets
+scripts/build-msix.ps1      Validated Preview/Store packaging
+scripts/test-msix.ps1       Isolated runner installation and packaged OCR checks
+scripts/installer.nsi       Legacy NSIS option
+.github/workflows/         Windows CI
 ```
 
-Every startup phase and every caught exception is recorded there. This is the single most useful artefact to attach to a bug report.
+See the [port scope](docs/windows-1.2-port.md), [feature mapping](docs/feature_parity.md) and [MSIX guide](docs/msix.md).
 
-## Project Structure
+## License and contact
 
-```text
-QPARKShot.sln                Solution file
-QPARKShot/                   Application source
-  App.xaml(.cs)              Entry point, tray, hotkeys, theme system
-  MainWindow.xaml(.cs)       Frame-navigation host with Mica backdrop
-  Views/                     WPF Pages and UserControls
-  Services/                  Capture, hotkeys, tray, watermark, persistence
-  Models/                    POCO mirrors of the macOS settings schema
-  Helpers/                   Bitmap, color, P/Invoke utilities
-  Assets/                    App icon and logo
-scripts/                     NSIS installer script
-.github/workflows/           CI build pipeline
-```
+[MIT License](LICENSE). Copyright © 2026 QPARK.
 
-The public repository intentionally keeps the source tree small. Local helper scripts, generated build output, packaged installers, signing material, and environment files are excluded by `.gitignore`.
-
-## Before Publishing
-
-Before pushing or tagging a public release, verify the repository contains only source files and public assets:
-
-```powershell
-git status --short
-git check-ignore -v build scripts/build-output "build/Installer" || true
-```
-
-For distribution outside a tightly trusted group, sign the installer with a code-signing certificate (Microsoft SmartScreen warns on the first launch of any unsigned executable until enough users run it).
-
-## License
-
-QPARK Shot for Windows is open source under the [MIT License](LICENSE).
-
-Copyright (c) 2026 QPARK.
-
-## Contact
-
-Questions, bug reports, and security concerns: [work@qpark.io](mailto:work@qpark.io)
+Questions, bug reports and security concerns: [work@qpark.io](mailto:work@qpark.io).

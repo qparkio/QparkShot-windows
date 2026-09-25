@@ -3,13 +3,16 @@ using System.Windows;
 using System.Windows.Media;
 using QPARKShot.Helpers;
 using QPARKShot.Services;
+using QPARKShot.Localization;
 
 namespace QPARKShot;
 
 public partial class App : Application
 {
-    public static MainWindow? MainWindowInstance { get; private set; }
+    public static MainWindow? MainWindowInstance { get; internal set; }
     private static System.Threading.Mutex? _appMutex;
+    private System.Windows.Threading.DispatcherTimer? _cleanupTimer;
+    public static bool IsDarkTheme { get; private set; }
 
     public App()
     {
@@ -76,16 +79,22 @@ public partial class App : Application
             return;
         }
 
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnSystemPreferenceChanged;
         // Capture pipeline wiring
         CaptureService.Shared.HideMainWindow = async () =>
         {
-            MainWindowInstance?.Dispatcher.Invoke(() => MainWindowInstance.Hide());
+            MainWindowInstance?.Dispatcher.Invoke(() => MainWindowInstance.HideForCapture());
             await System.Threading.Tasks.Task.CompletedTask;
         };
         CaptureService.Shared.OnCaptured = item =>
         {
-            MainWindowInstance?.Dispatcher.Invoke(() => MainWindowInstance.ShowEditor(item.Id));
+            MainWindowInstance?.Dispatcher.Invoke(() =>
+            {
+                if (SettingsStore.Shared.Settings.Export.DefaultQuickAction == "overlay") MainWindowInstance.ShowReview(item.Id);
+                else MainWindowInstance.ShowEditor(item.Id);
+            });
         };
+        CaptureService.Shared.RestoreMainWindow = () => MainWindowInstance?.EnsureVisible();
         Logger.Log("OnStartup: capture wired");
 
         // Hotkeys
@@ -100,6 +109,7 @@ public partial class App : Application
             TrayIconService.Shared.OnRequestAbout = () => MainWindowInstance?.Dispatcher.Invoke(() => MainWindowInstance.ShowAbout());
             TrayIconService.Shared.OnRequestQuit = () => Dispatcher.Invoke(() =>
             {
+                if (MainWindowInstance?.ConfirmQuit() != true) return;
                 if (MainWindowInstance != null) MainWindowInstance.IsQuitting = true;
                 Shutdown();
             });
@@ -111,11 +121,17 @@ public partial class App : Application
             Logger.LogException("TrayIconService.Start", ex);
         }
 
+        _cleanupTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(10) };
+        _cleanupTimer.Tick += async (_, _) => { await CleanupService.PerformAsync(); await WorkspaceStore.Shared.RefreshAsync(); };
+        _cleanupTimer.Start();
         Logger.Log("OnStartup: end (success)");
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _cleanupTimer?.Stop();
+        WorkspaceStore.Shared.Stop();
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnSystemPreferenceChanged;
         try { HotkeyService.Shared.Stop(); } catch { }
         try { TrayIconService.Shared.Stop(); } catch { }
         try
@@ -130,6 +146,10 @@ public partial class App : Application
         base.OnExit(e);
     }
 
+    private void OnSystemPreferenceChanged(object sender, Microsoft.Win32.UserPreferenceChangedEventArgs e)
+    {
+        if (SettingsStore.Shared.Settings.ThemePreference == "system") Dispatcher.BeginInvoke(() => ApplyTheme("system"));
+    }
     public static void ApplyTheme(string themePreference)
     {
         string actualTheme = themePreference;
@@ -138,7 +158,7 @@ public partial class App : Application
             actualTheme = IsWindowsDarkMode() ? "dark" : "light";
         }
 
-        Logger.Log($"ApplyTheme: setting to {actualTheme}");
+        IsDarkTheme = actualTheme == "dark";
 
         var resources = Application.Current.Resources;
         if (actualTheme == "light")
@@ -175,6 +195,7 @@ public partial class App : Application
             resources["QPARKAccent"] = new SolidColorBrush(Color.FromRgb(0x0A, 0x84, 0xFF));
             resources["IconButtonHover"] = new SolidColorBrush(Color.FromArgb(0x15, 0xFF, 0xFF, 0xFF));
         }
+        MainWindowInstance?.UpdateAppearance();
     }
 
     private static bool IsWindowsDarkMode()

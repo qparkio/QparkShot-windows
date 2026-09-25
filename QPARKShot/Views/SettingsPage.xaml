@@ -1,9 +1,9 @@
-<Page
+<UserControl
     x:Class="QPARKShot.Views.SettingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="Transparent"
-    Title="Preferences">
+    xmlns:l="clr-namespace:QPARKShot.Localization"
+    Background="Transparent">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="180" />
@@ -25,24 +25,26 @@
                         Background="Transparent" BorderThickness="0" Cursor="Hand">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="◀" Margin="0,0,6,0" />
-                        <TextBlock Text="Gallery" />
+                        <TextBlock Text="{l:Tr common.close}" />
                     </StackPanel>
                 </Button>
 
                 <StackPanel Grid.Row="1" Margin="14,12,14,8">
                     <TextBlock Text="QPARK Shot" FontSize="14" FontWeight="Bold" />
-                    <TextBlock Text="Preferences" FontSize="10"
+                    <TextBlock Text="{l:Tr common.settings}" FontSize="10"
                                Foreground="{DynamicResource SecondaryText}" />
                 </StackPanel>
 
                 <ListBox x:Name="TabList" Grid.Row="2" Margin="8,0" BorderThickness="0"
                          Background="Transparent" SelectionChanged="OnTabChanged">
-                    <ListBoxItem Tag="appearance">Appearance</ListBoxItem>
-                    <ListBoxItem Tag="hotkeys">Hotkeys</ListBoxItem>
-                    <ListBoxItem Tag="watermark">Watermark</ListBoxItem>
-                    <ListBoxItem Tag="storage">Storage</ListBoxItem>
-                    <ListBoxItem Tag="buffer">Buffer</ListBoxItem>
-                    <ListBoxItem Tag="about">About</ListBoxItem>
+                    <ListBoxItem Tag="appearance" Content="{l:Tr settings.general}"/>
+                    <ListBoxItem Tag="hotkeys" Content="{l:Tr settings.capture}"/>
+                    <ListBoxItem Tag="watermark" Content="{l:Tr settings.watermark}"/>
+                    <ListBoxItem Tag="storage" Content="{l:Tr settings.storage}"/>
+                    <ListBoxItem Tag="buffer" Content="{l:Tr workspace.current_session}"/>
+                    <ListBoxItem Tag="export" Content="{l:Tr settings.export}"/>
+                    <ListBoxItem Tag="index" Content="{l:Tr settings.index}"/>
+                    <ListBoxItem Tag="about" Content="{l:Tr settings.about}"/>
                 </ListBox>
             </Grid>
         </Border>
@@ -52,4 +54,4 @@
             <StackPanel x:Name="ContentRoot" />
         </ScrollViewer>
     </Grid>
-</Page>
+</UserControl>

@@ -16,36 +16,44 @@ public sealed class CaptureService
 
     private CaptureService() { }
 
+    public Action? RestoreMainWindow;
+    public bool IsCapturing { get; private set; }
     public async Task TriggerCapture(string? modeOverride = null, int? delayOverride = null)
     {
-        var settings = SettingsStore.Shared.Settings;
-        var mode = modeOverride ?? settings.Capture.Mode;
-        int delaySeconds = Math.Max(0, delayOverride ?? settings.Capture.DelaySeconds);
-
-        if (HideMainWindow != null) await HideMainWindow();
-        await Task.Delay(250);
-        if (delaySeconds > 0) await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
-
-        Rectangle? region;
-        if (mode == "selection")
+        if (IsCapturing) return;
+        IsCapturing = true;
+        var captured = false;
+        try
         {
-            region = await SelectionOverlayController.SelectRegionAsync();
-            if (region == null) return;
+            var settings = SettingsStore.Shared.Settings;
+            var mode = modeOverride ?? settings.Capture.Mode;
+            int delaySeconds = Math.Clamp(delayOverride ?? settings.Capture.DelaySeconds, 0, 10);
+            WorkspaceStore.Shared.Notify(Localization.L.T("status.capturing"));
+            if (HideMainWindow != null) await HideMainWindow();
+            await Task.Delay(250 + delaySeconds * 1000);
+            Rectangle? region = mode switch
+            {
+                "selection" => await SelectionOverlayController.SelectRegionAsync(),
+                "window" => await SelectionOverlayController.SelectRegionAsync(windowCapture: true),
+                "repeatArea" => settings.Capture.LastRegion,
+                _ => ScreenInfo.PrimaryBounds(),
+            };
+            if (region == null) { WorkspaceStore.Shared.Notify(Localization.L.T("status.capture_cancelled")); return; }
+            if (!ScreenInfo.VirtualScreenBounds().Contains(region.Value))
+                throw new InvalidOperationException(Localization.L.T("status.capture_failed"));
+            await Task.Delay(120);
+            using var bitmap = CaptureRegion(region.Value) ?? throw new IOException(Localization.L.T("status.capture_failed"));
+            Directory.CreateDirectory(AppPaths.TemporaryDirectory);
+            var path = Path.Combine(AppPaths.TemporaryDirectory, $"qpark-shot-{Guid.NewGuid()}.png");
+            if (!BitmapHelpers.SavePng(bitmap, path)) throw new IOException(Localization.L.T("status.capture_failed"));
+            if (mode == "selection") { settings.Capture.LastRegion = region; SettingsStore.Shared.Save(); }
+            var item = ShotQueueStore.Shared.Enqueue(path);
+            OnCaptured?.Invoke(item);
+            captured = true;
+            WorkspaceStore.Shared.Notify(Localization.L.T("review.captured"));
         }
-        else
-        {
-            region = ScreenInfo.PrimaryBounds();
-        }
-
-        var bitmap = CaptureRegion(region.Value);
-        if (bitmap == null) return;
-
-        var path = Path.Combine(Path.GetTempPath(), $"qpark-shot-{Guid.NewGuid()}.png");
-        try { BitmapHelpers.SavePng(bitmap, path); }
-        finally { bitmap.Dispose(); }
-
-        var item = ShotQueueStore.Shared.Enqueue(path);
-        OnCaptured?.Invoke(item);
+        catch (Exception ex) { Logger.LogException("Capture", ex); WorkspaceStore.Shared.Notify(ex.Message); }
+        finally { IsCapturing = false; if (!captured) RestoreMainWindow?.Invoke(); }
     }
 
     private static Bitmap? CaptureRegion(Rectangle region)

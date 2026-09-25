@@ -40,5 +40,7 @@ public sealed record WatermarkSettings(
         );
     }
 
+    public static WatermarkSettings Disabled { get; } = new("single", 150, "aligned", 0.45, false, "", "#FFFFFF", false, "", 120, 0.5, "bottomRight");
+
     public bool HasAnyWatermark => TextEnabled || LogoEnabled;
 }

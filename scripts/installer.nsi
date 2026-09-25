@@ -6,7 +6,7 @@ Unicode true
 SetCompressor /SOLID lzma
 
 !define APP_NAME      "QPARK Shot"
-!define APP_VERSION   "1.1.0"
+!define APP_VERSION   "1.2.0"
 !define APP_PUBLISHER "QPARK"
 !define APP_EXE       "QPARKShot.exe"
 !define APP_URL       "https://qpark.io"

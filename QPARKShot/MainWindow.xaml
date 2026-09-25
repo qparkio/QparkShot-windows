@@ -1,16 +1,52 @@
-<Window
-    x:Class="QPARKShot.MainWindow"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="QPARK Shot"
-    Width="1100" Height="720"
-    MinWidth="900" MinHeight="600"
-    WindowStartupLocation="CenterScreen"
-    Background="{DynamicResource WindowBackground}"
-    Foreground="{DynamicResource WindowForeground}"
-    TextOptions.TextFormattingMode="Display"
-    UseLayoutRounding="True">
-    <Grid x:Name="RootGrid">
-        <Frame x:Name="ContentFrame" NavigationUIVisibility="Hidden" />
-    </Grid>
+<Window x:Class="QPARKShot.MainWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:l="clr-namespace:QPARKShot.Localization"
+ Title="QPARK Shot" Width="1280" Height="800" MinWidth="1000" MinHeight="680"
+ WindowStartupLocation="CenterScreen" Background="{DynamicResource WindowBackground}"
+ Foreground="{DynamicResource WindowForeground}" TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
+ <Grid>
+  <Grid.ColumnDefinitions><ColumnDefinition Width="182"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+  <Border Background="{DynamicResource SidebarFill}" BorderBrush="{DynamicResource DividerStroke}" BorderThickness="0,0,1,0" Padding="12,20">
+   <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Margin="4,0,0,24">
+     <Image x:Name="BrandLogo" Width="44" Height="44" HorizontalAlignment="Left" Margin="0,0,0,12"/>
+     <TextBlock Text="QPARK Shot" FontSize="19" FontWeight="SemiBold"/>
+     <TextBlock Text="Windows" Foreground="{DynamicResource SecondaryText}" Margin="0,4,0,0"/>
+    </StackPanel>
+    <StackPanel DockPanel.Dock="Bottom">
+     <Button Content="{l:Tr workspace.clear_session}" Click="OnClearSession" Margin="0,6"/>
+     <Button Content="{l:Tr common.settings}" Click="OnSettings" Margin="0,6" AutomationProperties.AutomationId="workspace.settings"/>
+    </StackPanel>
+    <ListBox x:Name="SectionList" SelectionChanged="OnSectionChanged" AutomationProperties.AutomationId="workspace.sections">
+     <ListBoxItem Tag="library" Content="{l:Tr workspace.library}" IsSelected="True"/>
+     <ListBoxItem Tag="session" Content="{l:Tr workspace.current_session}"/>
+     <ListBoxItem Tag="favorites" Content="{l:Tr workspace.favorites}"/>
+     <ListBoxItem Tag="recent" Content="{l:Tr workspace.recent}"/>
+     <ListBoxItem Tag="missing" Content="{l:Tr workspace.missing}"/>
+    </ListBox>
+   </DockPanel>
+  </Border>
+  <Grid Grid.Column="1">
+   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+   <Border Padding="18,14" BorderBrush="{DynamicResource DividerStroke}" BorderThickness="0,0,0,1">
+    <DockPanel LastChildFill="True">
+     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+      <Button x:Name="CaptureButton" Content="{l:Tr capture.selected_area}" Click="OnCapture" Padding="14,8" Background="{DynamicResource QPARKAccent}" Foreground="White" AutomationProperties.AutomationId="workspace.capture"/>
+      <Button Content="⌄" Click="OnCaptureMenu" Margin="4,0,0,0" AutomationProperties.Name="{l:Tr capture.with_delay}"/>
+     </StackPanel>
+     <Grid>
+     <TextBox x:Name="SearchBox" TextChanged="OnSearch" VerticalContentAlignment="Center" Padding="10,6" ToolTip="{l:Tr workspace.search_placeholder}" AutomationProperties.Name="{l:Tr common.search}" AutomationProperties.AutomationId="workspace.search"/>
+      <TextBlock Text="{l:Tr workspace.search_placeholder}" IsHitTestVisible="False" Margin="12,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource SecondaryText}">
+       <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+      </TextBlock>
+     </Grid>
+    </DockPanel>
+   </Border>
+   <ContentControl x:Name="ContentHost" Grid.Row="1"/>
+   <Border Grid.Row="2" Padding="18,8" BorderBrush="{DynamicResource DividerStroke}" BorderThickness="0,1,0,0">
+    <TextBlock x:Name="StatusText" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryText}" AutomationProperties.AutomationId="workspace.status"/>
+   </Border>
+  </Grid>
+ </Grid>
 </Window>

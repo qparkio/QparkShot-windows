@@ -24,7 +24,6 @@ public sealed class ShotQueueStore : ObservableObject
         set => SetProperty(ref _activeId, value);
     }
 
-    private static readonly string TempPrefix = Path.GetTempPath();
 
     private ShotQueueStore() { }
 
@@ -57,9 +56,10 @@ public sealed class ShotQueueStore : ObservableObject
 
         var removed = Items[idx];
         Items.RemoveAt(idx);
+        EditorDraftStore.Shared.Remove(id);
 
         // Delete temp PNGs only (user-saved files are left alone).
-        if (removed.Path.StartsWith(TempPrefix, StringComparison.OrdinalIgnoreCase))
+        if (AppPaths.IsOwnedTemporary(removed.Path))
         {
             try { File.Delete(removed.Path); } catch { }
         }
@@ -83,12 +83,13 @@ public sealed class ShotQueueStore : ObservableObject
     {
         foreach (var item in Items.ToList())
         {
-            if (item.Path.StartsWith(TempPrefix, StringComparison.OrdinalIgnoreCase))
+            if (AppPaths.IsOwnedTemporary(item.Path))
             {
                 try { File.Delete(item.Path); } catch { }
             }
         }
         Items.Clear();
+        EditorDraftStore.Shared.Clear();
         ActiveId = null;
     }
 }
