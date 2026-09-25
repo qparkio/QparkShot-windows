@@ -18,6 +18,7 @@ public partial class GalleryPage : UserControl
     public ObservableCollection<LibraryEntry> Screenshots { get; } = new();
     private string? _inspectedPath;
     private string? _inspectedSection;
+    private string? _inspectedLanguage;
     private TextBlock? _ocrStatus;
     private TextBox? _ocrText;
     private Point _dragStart;
@@ -75,9 +76,9 @@ public partial class GalleryPage : UserControl
     private void UpdateInspector()
     {
         if (GalleryItems.SelectedItem is not LibraryEntry entry) { Inspector.Children.Clear(); _inspectedPath = null; return; }
-        if (_inspectedPath != entry.Path || _inspectedSection != WorkspaceStore.Shared.Section)
+        if (_inspectedPath != entry.Path || _inspectedSection != WorkspaceStore.Shared.Section || _inspectedLanguage != L.Shared.Language)
         {
-            _inspectedPath = entry.Path; _inspectedSection = WorkspaceStore.Shared.Section; _ocrStatus = null; _ocrText = null; Inspector.Children.Clear();
+            _inspectedPath = entry.Path; _inspectedSection = WorkspaceStore.Shared.Section; _inspectedLanguage = L.Shared.Language; _ocrStatus = null; _ocrText = null; Inspector.Children.Clear();
             Inspector.Children.Add(new TextBlock { Text = entry.FileName, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 16) });
             if (WorkspaceStore.Shared.Section == "session")
             {

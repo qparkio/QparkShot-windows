@@ -134,10 +134,14 @@ internal static class Program
         window.ShowReview(first.Id); await Task.Delay(250); await SaveWindowAsync(window, "review-en-light");
         window.ShowGallery();
         SettingsStore.Shared.Settings.Localization.AppLanguageCode = "ru"; SettingsStore.Shared.Settings.ThemePreference = "dark"; App.ApplyTheme("dark");
-        L.Shared.Refresh(); window.ShowGallery(); await SaveWindowAsync(window, "library-ru-dark");
+        SettingsStore.Shared.Save(); window.ShowGallery();
+        var gallery = (GalleryPage)((ContentControl)window.FindName("ContentHost")).Content;
+        var inspector = (StackPanel)gallery.FindName("Inspector");
+        Check(inspector.Children.OfType<Button>().Any(b => Equals(b.Content, L.T("common.edit"))), "language change refreshes existing inspector actions");
+        await SaveWindowAsync(window, "library-ru-dark");
         window.Width = 1000; window.Height = 720; window.ShowEditor(first.Id); await Task.Delay(150); await SaveWindowAsync(window, "editor-ru-compact");
         var settingsWindow = new Window { Content = new SettingsPage("appearance"), Width = 940, Height = 720 };
-        settingsWindow.SetResourceReference(Window.BackgroundProperty, "WindowBackground"); settingsWindow.Show(); await SaveWindowAsync(settingsWindow, "settings-ru-dark"); settingsWindow.Close();
+        settingsWindow.SetResourceReference(Window.BackgroundProperty, "WindowBackground"); settingsWindow.SetResourceReference(Window.ForegroundProperty, "WindowForeground"); settingsWindow.Show(); await SaveWindowAsync(settingsWindow, "settings-ru-dark"); settingsWindow.Close();
         var watermarkWindow = new Window { Content = new SettingsPage("watermark"), Width = 940, Height = 720 };
         watermarkWindow.SetResourceReference(Window.BackgroundProperty, "WindowBackground"); watermarkWindow.SetResourceReference(Window.ForegroundProperty, "WindowForeground");
         watermarkWindow.Show(); await SaveWindowAsync(watermarkWindow, "watermark-ru-dark"); watermarkWindow.Close();
@@ -160,9 +164,14 @@ internal static class Program
     private static async Task SaveWindowAsync(Window window, string name)
     {
         await Task.Delay(150); window.UpdateLayout();
-        var content = (FrameworkElement)window.Content;
-        var bitmap = new RenderTargetBitmap((int)content.ActualWidth, (int)content.ActualHeight, 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(content);
+        // Include the root Window so inherited RTL transforms and translucent brushes
+        // are composed against the actual window background.
+        var bitmap = new RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+        var background = new DrawingVisual();
+        using (var drawing = background.RenderOpen())
+            drawing.DrawRectangle(window.Background, null, new Rect(0, 0, window.ActualWidth, window.ActualHeight));
+        bitmap.Render(background);
+        bitmap.Render(window);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var stream = File.Create(Path.Combine(_output, name + ".png")); encoder.Save(stream);
     }

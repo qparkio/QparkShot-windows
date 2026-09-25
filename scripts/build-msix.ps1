@@ -24,7 +24,8 @@ if ($TestPackage) {
     if ($IdentityName -eq 'QPARK.Shot.Preview' -or $Publisher -eq 'CN=QPARK Shot Test') { throw 'Test identity cannot be used for Store submissions.' }
     $displayName = 'QPARK Shot'
 }
-$stage = Join-Path $OutputDirectory 'staging'
+# Each build starts with an empty stage, including when the output directory is reused.
+$stage = Join-Path $OutputDirectory ('staging-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path "$stage/app", $OutputDirectory | Out-Null
 Copy-Item "$PublishDirectory/*" "$stage/app" -Recurse -Force
 Copy-Item 'packaging/Assets' $stage -Recurse -Force

@@ -14,7 +14,7 @@ public partial class EditorPage : UserControl, IDisposable
 {
     private Guid _itemId;
     private Bitmap? _sourceBitmap;
-    private int _loadGeneration;
+    private int _loadGeneration, _reviewGeneration;
     private bool _disposed, _exporting, _review;
     public EditorPage(Guid itemId, bool review = false)
     {
@@ -101,11 +101,19 @@ public partial class EditorPage : UserControl, IDisposable
     }
     private async Task UpdateReviewAsync()
     {
-        var id = _itemId; var generation = _loadGeneration;
-        using var rendered = await RenderAsync();
-        if (_disposed || id != _itemId || generation != _loadGeneration || rendered == null) return;
-        // Review uses the same final renderer as export, and retains the session sidebar.
-        Canvas.LoadImage(rendered);
+        var id = _itemId; var generation = _loadGeneration; var reviewGeneration = ++_reviewGeneration;
+        try
+        {
+            using var rendered = await RenderAsync();
+            if (_disposed || id != _itemId || generation != _loadGeneration || reviewGeneration != _reviewGeneration || rendered == null) return;
+            // Review uses the same final renderer as export, and retains the session sidebar.
+            Canvas.LoadImage(rendered);
+        }
+        catch (Exception ex)
+        {
+            if (!_disposed && generation == _loadGeneration && reviewGeneration == _reviewGeneration)
+                WorkspaceStore.Shared.Notify(ex.Message);
+        }
     }
     private async void OnPreview(object sender, RoutedEventArgs e) => await ExportActionAsync("preview");
     private void OnPreviewClose(object sender, RoutedEventArgs e) => PreviewOverlay.Visibility = Visibility.Collapsed;

@@ -50,6 +50,7 @@ public partial class MainWindow : Window
     {
         UpdateAppearance();
         _editor?.ApplySettings();
+        _gallery?.RefreshView();
     }
     public void UpdateAppearance()
     {
@@ -58,6 +59,11 @@ public partial class MainWindow : Window
         if (Hwnd != IntPtr.Zero) DwmSetWindowAttribute(Hwnd, 20, ref value, sizeof(int));
         FlowDirection = L.Shared.Language == "ar" ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
         L.Shared.Refresh();
+        CaptureButton.Content = L.T(SettingsStore.Shared.Settings.Capture.Mode switch
+        {
+            "fullScreen" => "capture.full_screen", "window" => "capture.window",
+            "repeatArea" => "capture.repeat_area", _ => "capture.selected_area",
+        });
     }
     public void ShowGallery()
     {
