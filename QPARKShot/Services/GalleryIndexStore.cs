@@ -8,6 +8,7 @@ public sealed class GalleryIndexStore
 {
     public static GalleryIndexStore Shared { get; } = new();
     private readonly string _path;
+    private bool _primaryCorrupt;
     public Dictionary<string, LibraryEntry> Entries { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
     public event EventHandler? Changed;
     public GalleryIndexStore(string? path = null)
@@ -18,11 +19,12 @@ public sealed class GalleryIndexStore
             if (!File.Exists(candidate)) continue;
             try
             {
-                var entries = JsonSerializer.Deserialize<Dictionary<string, LibraryEntry>>(File.ReadAllText(candidate), JsonFile.Options);
-                if (entries != null) Entries = new(entries, StringComparer.OrdinalIgnoreCase);
+                var entries = JsonSerializer.Deserialize<Dictionary<string, LibraryEntry>>(File.ReadAllText(candidate), JsonFile.Options)
+                    ?? throw new JsonException("Library index root is null.");
+                Entries = new(entries, StringComparer.OrdinalIgnoreCase);
                 break;
             }
-            catch (Exception ex) { Logger.LogException("Library index load", ex); }
+            catch (Exception ex) { if (candidate == _path) _primaryCorrupt = true; Logger.LogException("Library index load", ex); }
         }
     }
     public void Reconcile(IEnumerable<string> paths, IReadOnlySet<string> readableRoots)
@@ -48,7 +50,12 @@ public sealed class GalleryIndexStore
         }
         Save();
     }
-    public void Save() { JsonFile.Save(_path, Entries); Changed?.Invoke(this, EventArgs.Empty); }
+    public void Save()
+    {
+        JsonFile.Save(_path, Entries, _primaryCorrupt ? _path + ".corrupt-" + Guid.NewGuid().ToString("N") : null);
+        _primaryCorrupt = false;
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
     public void Forget(string path) { Entries.Remove(path); Save(); }
     public void Relink(string oldPath, string newPath)
     {

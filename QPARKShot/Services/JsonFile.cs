@@ -9,14 +9,14 @@ public static class JsonFile
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true, WriteIndented = true,
     };
-    public static void Save<T>(string path, T value)
+    public static void Save<T>(string path, T value, string? backupPath = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             File.WriteAllText(temporary, JsonSerializer.Serialize(value, Options));
-            if (File.Exists(path)) File.Replace(temporary, path, path + ".bak");
+            if (File.Exists(path)) File.Replace(temporary, path, backupPath ?? path + ".bak");
             else File.Move(temporary, path);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }

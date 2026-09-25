@@ -12,7 +12,7 @@ The 1.2 source update brings the current macOS workspace and editing workflow to
 
 ### Capture and edit
 
-- Capture a selected area, the full virtual desktop, a window or the last selected area, with an optional delay.
+- Capture a selected area, the primary screen, a window or the last selected area, with an optional delay.
 - Configure global shortcuts for area and full-screen capture. Invalid, duplicate and unavailable shortcuts are reported.
 - Keep multiple captures in the current session and switch between independent editing drafts.
 - Draw freehand, arrows, rectangles and text; add numbered callouts, opaque redaction or blur.

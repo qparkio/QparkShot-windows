@@ -56,7 +56,12 @@ internal static class Program
         migrated.Save(); var reread = new SettingsStore(oldPath);
         Check(reread.Settings.Capture.DelaySeconds == 5 && reread.Settings.Watermark.Text.Enabled, "settings round trip");
         File.WriteAllText(oldPath, "broken JSON");
-        Check(new SettingsStore(oldPath).Settings.Watermark.Text.Text == "KEEP", "damaged settings recover from backup");
+        var recovered = new SettingsStore(oldPath);
+        Check(recovered.Settings.Watermark.Text.Text == "KEEP", "damaged settings recover from backup");
+        recovered.Save();
+        Check(new SettingsStore(oldPath + ".bak").Settings.Watermark.Text.Text == "KEEP"
+            && Directory.GetFiles(AppPaths.TestRoot!, "old-settings.json.corrupt-*").Any(p => File.ReadAllText(p) == "broken JSON"),
+            "saving recovered settings preserves the good backup and damaged primary evidence");
         var draft = new EditorDraft();
         var arrow = new ArrowAnnotation { Start = new(5, 6), End = new(80, 90) };
         var crop = new Rect(10, 10, 100, 80);
