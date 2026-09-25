@@ -10,7 +10,7 @@ using QPARKShot.Services;
 using Bitmap = System.Drawing.Bitmap;
 namespace QPARKShot.Views;
 
-public partial class EditorPage : Page, IDisposable
+public partial class EditorPage : UserControl, IDisposable
 {
     private Guid _itemId;
     private Bitmap? _sourceBitmap;
@@ -64,12 +64,12 @@ public partial class EditorPage : Page, IDisposable
     private void OnUndo(object sender, RoutedEventArgs e) => Canvas.Undo();
     private void OnRedo(object sender, RoutedEventArgs e) => Canvas.Redo();
     private void OnClearCrop(object sender, RoutedEventArgs e) => Canvas.ClearCrop();
-    private void OnTextChanged(object sender, TextChangedEventArgs e) { if (Canvas != null) Canvas.TextInput = TextInput.Text; }
+    private void OnTextChanged(object sender, TextChangedEventArgs e) { if (Canvas != null) Canvas.AnnotationText = TextEntry.Text; }
     private void OnToolChanged(object sender, SelectionChangedEventArgs? e)
     {
-        if (Canvas == null || TextInput == null) return;
+        if (Canvas == null || TextEntry == null) return;
         if (ToolPicker.SelectedItem is ComboBoxItem item && Enum.TryParse<ToolType>(item.Tag?.ToString(), out var tool))
-        { Canvas.CurrentTool = tool; TextInput.Visibility = tool == ToolType.Text ? Visibility.Visible : Visibility.Collapsed; }
+        { Canvas.CurrentTool = tool; TextEntry.Visibility = tool == ToolType.Text ? Visibility.Visible : Visibility.Collapsed; }
     }
     private void OnColorPick(object sender, RoutedEventArgs e)
     {

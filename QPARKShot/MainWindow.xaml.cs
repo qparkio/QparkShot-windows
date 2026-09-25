@@ -71,7 +71,7 @@ public partial class MainWindow : Window
     public void ShowAbout() => ShowPreferences("about");
     private void ShowPreferences(string tab)
     {
-        if (_preferences != null) { _preferences.Activate(); return; }
+        if (_preferences != null) { _preferences.Show(); _preferences.Activate(); return; }
         _preferences = new Window
         {
             Title = L.T("common.settings"), Owner = this, Width = 940, Height = 720, MinWidth = 880, MinHeight = 600,

@@ -42,7 +42,7 @@ public static class ShotActions
         var image = BitmapHelpers.ToBitmapSource(bitmap);
         var panel = new DockPanel();
         var copy = new Button { Content = L.T("common.copy"), Margin = new Thickness(8), HorizontalAlignment = HorizontalAlignment.Left };
-        copy.Click += (_, _) => Clipboard.SetImage(image);
+        copy.Click += (_, _) => System.Windows.Clipboard.SetImage(image);
         DockPanel.SetDock(copy, Dock.Top); panel.Children.Add(copy);
         panel.Children.Add(new Image { Source = image, Stretch = System.Windows.Media.Stretch.Uniform, Margin = new Thickness(8) });
         var window = new Window { Title = L.T("review.pinned"), Topmost = true, Width = 520, Height = 420, MinWidth = 220, MinHeight = 180, Content = panel };

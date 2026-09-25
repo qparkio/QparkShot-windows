@@ -18,7 +18,7 @@ using WinFormsDialogResult = System.Windows.Forms.DialogResult;
 
 namespace QPARKShot.Views;
 
-public partial class SettingsPage : Page
+public partial class SettingsPage : UserControl
 {
     public SettingsPage(string initialTab = "appearance")
     {

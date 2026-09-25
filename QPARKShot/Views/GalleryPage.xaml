@@ -1,7 +1,7 @@
-<Page x:Class="QPARKShot.Views.GalleryPage"
+<UserControl x:Class="QPARKShot.Views.GalleryPage"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:l="clr-namespace:QPARKShot.Localization" xmlns:local="clr-namespace:QPARKShot.Views" Background="Transparent">
- <Page.Resources><local:ThumbnailConverter x:Key="Thumbnail"/></Page.Resources>
+ <UserControl.Resources><local:ThumbnailConverter x:Key="Thumbnail"/></UserControl.Resources>
  <Grid>
   <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition x:Name="InspectorColumn" Width="252"/></Grid.ColumnDefinitions>
   <Grid Margin="16">
@@ -32,4 +32,4 @@
    <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel x:Name="Inspector"/></ScrollViewer>
   </Border>
  </Grid>
-</Page>
+</UserControl>

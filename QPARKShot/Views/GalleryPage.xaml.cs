@@ -13,16 +13,26 @@ using QPARKShot.Models;
 using QPARKShot.Services;
 namespace QPARKShot.Views;
 
-public partial class GalleryPage : Page
+public partial class GalleryPage : UserControl
 {
     public ObservableCollection<LibraryEntry> Screenshots { get; } = new();
     private string? _inspectedPath;
+    private string? _inspectedSection;
     private TextBlock? _ocrStatus;
     private TextBox? _ocrText;
+    private Point _dragStart;
     public GalleryPage()
     {
         InitializeComponent(); GalleryItems.ItemsSource = Screenshots;
         Loaded += OnLoaded; Unloaded += OnUnloaded;
+        GalleryItems.PreviewMouseLeftButtonDown += (_, e) => _dragStart = e.GetPosition(GalleryItems);
+        GalleryItems.PreviewMouseMove += (_, e) =>
+        {
+            var current = e.GetPosition(GalleryItems);
+            if (e.LeftButton != MouseButtonState.Pressed || (Math.Abs(current.X - _dragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(current.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance)) return;
+            if (GalleryItems.SelectedItem is LibraryEntry { Missing: false } entry && File.Exists(entry.Path))
+                DragDrop.DoDragDrop(GalleryItems, new DataObject(DataFormats.FileDrop, new[] { entry.Path }), DragDropEffects.Copy);
+        };
     }
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
@@ -65,9 +75,9 @@ public partial class GalleryPage : Page
     private void UpdateInspector()
     {
         if (GalleryItems.SelectedItem is not LibraryEntry entry) { Inspector.Children.Clear(); _inspectedPath = null; return; }
-        if (_inspectedPath != entry.Path)
+        if (_inspectedPath != entry.Path || _inspectedSection != WorkspaceStore.Shared.Section)
         {
-            _inspectedPath = entry.Path; Inspector.Children.Clear();
+            _inspectedPath = entry.Path; _inspectedSection = WorkspaceStore.Shared.Section; _ocrStatus = null; _ocrText = null; Inspector.Children.Clear();
             Inspector.Children.Add(new TextBlock { Text = entry.FileName, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 16) });
             if (WorkspaceStore.Shared.Section == "session")
             {

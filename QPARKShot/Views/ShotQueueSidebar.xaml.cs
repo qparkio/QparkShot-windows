@@ -59,7 +59,7 @@ public partial class ShotQueueSidebar : UserControl
     {
         bool isActive = ShotQueueStore.Shared.ActiveId == item.Id;
 
-        var root = new Grid { Margin = new Thickness(0, 0, 0, 8), Tag = item.Id, Cursor = Cursors.Hand };
+        var root = new Grid { Margin = new Thickness(0, 0, 0, 8), Tag = item.Id, Cursor = Cursors.Hand, Focusable = true };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
@@ -128,9 +128,13 @@ public partial class ShotQueueSidebar : UserControl
             ShotQueueStore.Shared.ActiveId = item.Id;
             OnRequestOpen?.Invoke(item.Id);
         };
+        System.Windows.Automation.AutomationProperties.SetName(root, Path.GetFileName(item.Path));
+        root.KeyDown += (_, e) => { if (e.Key == Key.Enter) { OnRequestOpen?.Invoke(item.Id); e.Handled = true; } };
+        Point start = default;
+        root.PreviewMouseLeftButtonDown += (_, e) => { start = e.GetPosition(root); root.Focus(); };
         root.PreviewMouseMove += (sender, e) =>
         {
-            if (e.LeftButton == MouseButtonState.Pressed)
+            if (e.LeftButton == MouseButtonState.Pressed && (Math.Abs(e.GetPosition(root).X - start.X) >= SystemParameters.MinimumHorizontalDragDistance || Math.Abs(e.GetPosition(root).Y - start.Y) >= SystemParameters.MinimumVerticalDragDistance))
             {
                 try
                 {

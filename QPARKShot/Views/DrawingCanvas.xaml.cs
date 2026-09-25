@@ -20,7 +20,7 @@ public partial class DrawingCanvas : UserControl
     public ToolType CurrentTool { get; set; } = ToolType.Freehand;
     public string CurrentColorHex { get; set; } = "#FF3B30";
     public double CurrentStrokeWidth { get; set; } = 4.0;
-    public string TextInput { get; set; } = "Text Annotation";
+    public string AnnotationText { get; set; } = "Text Annotation";
 
     public List<Annotation> Annotations { get; private set; } = new();
     public WpfRect? CropRect { get; private set; }
@@ -106,7 +106,7 @@ public partial class DrawingCanvas : UserControl
                 };
                 break;
             case ToolType.Text:
-                var text = string.IsNullOrWhiteSpace(TextInput) ? "Text" : TextInput;
+                var text = string.IsNullOrWhiteSpace(AnnotationText) ? "Text" : AnnotationText;
                 Annotations.Add(new TextAnnotation
                 {
                     ColorHex = CurrentColorHex, StrokeWidth = CurrentStrokeWidth,
