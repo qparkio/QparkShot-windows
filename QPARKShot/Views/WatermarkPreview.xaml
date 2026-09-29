@@ -2,9 +2,10 @@
     x:Class="QPARKShot.Views.WatermarkPreview"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:l="clr-namespace:QPARKShot.Localization"
     Width="340" Height="220">
     <StackPanel>
-        <TextBlock Text="Live Preview" FontSize="11" FontWeight="SemiBold"
+        <TextBlock Text="{l:Tr common.preview}" FontSize="11" FontWeight="SemiBold"
                    Foreground="{DynamicResource SecondaryText}" Margin="0,0,0,6" />
         <Border CornerRadius="6" ClipToBounds="True" Height="190">
             <Border.Background>

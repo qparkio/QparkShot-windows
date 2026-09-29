@@ -21,7 +21,7 @@ public partial class WatermarkPreview : UserControl
     {
         InitializeComponent();
         Loaded += (_, _) => { SettingsStore.Shared.SettingsChanged += OnSettingsChanged; Refresh(); };
-        Unloaded += (_, _) => SettingsStore.Shared.SettingsChanged -= OnSettingsChanged;
+        Unloaded += (_, _) => { SettingsStore.Shared.SettingsChanged -= OnSettingsChanged; _renderCts?.Cancel(); _renderCts?.Dispose(); _renderCts = null; };
     }
 
     private void OnSettingsChanged(object? s, EventArgs e) => Refresh();
@@ -29,6 +29,7 @@ public partial class WatermarkPreview : UserControl
     public void Refresh()
     {
         _renderCts?.Cancel();
+        _renderCts?.Dispose();
         var cts = _renderCts = new CancellationTokenSource();
         var token = cts.Token;
         var ws = WatermarkSettings.FromStore(SettingsStore.Shared);

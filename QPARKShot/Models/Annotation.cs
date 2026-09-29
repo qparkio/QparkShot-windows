@@ -11,7 +11,7 @@ public enum ToolType
     Freehand,
     Arrow,
     Rectangle,
-    Text
+    Text, Redact, Blur, Callout
 }
 
 public abstract class Annotation
@@ -19,6 +19,12 @@ public abstract class Annotation
     public Guid Id { get; set; } = Guid.NewGuid();
     public string ColorHex { get; set; } = "#FFFFFF";
     public double StrokeWidth { get; set; } = 4.0;
+    public Annotation Copy()
+    {
+        var copy = (Annotation)MemberwiseClone();
+        if (copy is FreehandAnnotation freehand) freehand.Points = new(freehand.Points);
+        return copy;
+    }
 }
 
 public sealed class FreehandAnnotation : Annotation
@@ -42,4 +48,15 @@ public sealed class TextAnnotation : Annotation
     public Point Position { get; set; }
     public string Text { get; set; } = "";
     public double FontSize { get; set; } = 18;
+}
+
+public sealed class AreaAnnotation : Annotation
+{
+    public Rect Rect { get; set; }
+    public bool Blur { get; set; }
+}
+public sealed class CalloutAnnotation : Annotation
+{
+    public Point Position { get; set; }
+    public int Number { get; set; }
 }
