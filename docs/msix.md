@@ -2,7 +2,7 @@
 
 Edit the sources on macOS and push a branch, or start the `Build Windows` workflow using `gh workflow run build-windows.yml --ref <branch>`. Compilation, WPF checks and MSIX packaging run on Windows Server 2022 in GitHub Actions. Download the `QPARKShot-Windows-1.2.0` artifact to the Mac after completion.
 
-The artifact contains `MSIX/QPARKShot-1.2.0-x64-Preview.msix`, the public test certificate and `QA` evidence. The Preview is a self-signed test build with a separate identity. The internal validation package includes the regression executable; the delivered Preview does not.
+The artifact contains `MSIX/QPARKShot-1.2.0-x64-Preview.msix`, the public test certificate and `QA` evidence. Its `GitHub` directory contains the standalone EXE installer and checksums. The Preview is a self-signed test build with a separate identity. The internal validation package includes the regression executable; the delivered Preview does not. Publish only the `GitHub` directory as standalone release assets; Store upload packages and test certificates are not public installer assets.
 
 ## Microsoft Store package
 
@@ -29,7 +29,7 @@ To test a Preview on a dedicated Windows account, trust only the supplied **publ
 
 ## Required interactive checks
 
-Install on a supported Windows client, exercise capture with 100/150/200% scaling and multiple monitors, verify native sharing/clipboard and hotkeys, then upgrade an existing 1.1 NSIS installation with real settings and a backup of its library. Verify preferences, gallery paths and saved PNGs after the transition. Run Windows App Certification Kit before submission.
+Install on a supported Windows client, exercise capture with 100/150/200% scaling and multiple monitors, and verify native sharing/clipboard and hotkeys. CI checks the standalone 1.1-to-1.2 installer upgrade with isolated settings and images, including files inside the installation folder. The separate transition from NSIS to Store MSIX still needs a Windows client check with a backup of the library. Run Windows App Certification Kit before submission.
 
 The build scripts never submit to Partner Center or publish a GitHub release.
 

@@ -20,13 +20,13 @@ The scope includes the application, its JSON stores, capture and selection overl
 - A failed capture restores the main window. Duplicate capture requests are ignored until the active request completes.
 - Export failures stay visible and duplicate filenames never overwrite previous files.
 - Windows OCR runs locally, serially across the complete library. Package identity and installed Windows OCR languages are required; unavailable languages are reported. Cancellation, file timestamps and language signatures prevent stale results being committed.
-- The primary Store distribution format is MSIX. NSIS remains a source-level option for an ordinary installer; Windows OCR requires the packaged version.
+- The Store distribution format is MSIX. GitHub releases provide an ordinary NSIS installer with the same application sources; Windows OCR requires the packaged version.
 
 ## Data and compatibility
 
 Settings and the new library index are atomically replaced with backups. Existing settings fields remain readable, and new fields have defaults. Screenshots remain at their current paths. Favorites, tags and missing-file records are retained when a storage root is unavailable. Relinking preserves metadata. QA uses explicit isolated folders and never points at a real user's gallery.
 
-The MSIX full-trust app retains the old Roaming AppData path so Windows can read pre-package settings through its AppData compatibility behavior. Upgrade and uninstall behavior still needs a Windows client check; a runner installation is not proof for every supported Windows version. Existing NSIS installations are not automatically uninstalled by MSIX.
+The MSIX full-trust app retains the old Roaming AppData path so Windows can read pre-package settings through its AppData compatibility behavior. The transition from NSIS to Store MSIX still needs a Windows client check; a runner installation is not proof for every supported Windows version. Existing NSIS installations are not automatically uninstalled by MSIX. The standalone installer upgrade from 1.1 is checked separately on the Windows runner: custom install directory, retained settings/images, refusal to terminate a running app and uninstall of only shipped files.
 
 ## Verification and completion
 

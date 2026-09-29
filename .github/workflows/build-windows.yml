@@ -38,6 +38,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
           dotnet publish QPARKShot.Tests/QPARKShot.Tests.csproj -c Release -r win-x64 --self-contained true -o build/Tests
           if ($LASTEXITCODE -ne 0) { throw 'Test harness publish failed.' }
+      - name: Build standalone installer
+        shell: pwsh
+        run: |
+          if (!(Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) {
+            choco install nsis --version=3.11 -y --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'NSIS installation failed.' }
+          }
+          ./scripts/build-installer.ps1
+      - name: Verify installer and upgrade from 1.1
+        shell: pwsh
+        run: ./scripts/test-installer.ps1
       - name: Package MSIX validation build
         shell: pwsh
         run: ./scripts/build-msix.ps1 -TestPackage -IncludeTests -OutputDirectory build/MSIX-QA
@@ -64,5 +75,6 @@ jobs:
             build/MSIX/*.msix
             build/MSIX/*.cer
             build/Store/*.msix
+            build/GitHub/*
             build/QA/**
           if-no-files-found: warn

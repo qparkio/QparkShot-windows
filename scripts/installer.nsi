@@ -1,6 +1,5 @@
 ; QPARK Shot — NSIS installer (per-user, no admin required)
-; Compile with: makensis scripts/installer.nsi
-; Expects build artifacts at build/Release/ relative to this script.
+; Compile with: ./scripts/build-installer.ps1
 
 Unicode true
 SetCompressor /SOLID lzma
@@ -20,8 +19,39 @@ RequestExecutionLevel user
 BrandingText "${APP_PUBLISHER} — ${APP_NAME} ${APP_VERSION}"
 ShowInstDetails show
 ShowUninstDetails show
+VIProductVersion "${APP_VERSION}.0"
+VIAddVersionKey "ProductName" "${APP_NAME}"
+VIAddVersionKey "ProductVersion" "${APP_VERSION}"
+VIAddVersionKey "FileVersion" "${APP_VERSION}"
+VIAddVersionKey "FileDescription" "${APP_NAME} per-user installer"
+VIAddVersionKey "LegalCopyright" "Copyright 2026 QPARK"
 
 !include "MUI2.nsh"
+!include "LogicLib.nsh"
+!include "x64.nsh"
+
+!macro RequireAppClosed
+    System::Call 'kernel32::OpenMutexW(i 0x100000, i 0, w "QPARKShot_SingleInstance_Mutex") p.r0'
+    ${If} $0 != 0
+        System::Call 'kernel32::CloseHandle(p r0)'
+        MessageBox MB_OK|MB_ICONEXCLAMATION "Save your screenshots and quit QPARK Shot from its tray menu before continuing." /SD IDOK
+        SetErrorLevel 2
+        Abort
+    ${EndIf}
+!macroend
+
+Function .onInit
+    ${IfNot} ${RunningX64}
+        MessageBox MB_OK|MB_ICONSTOP "QPARK Shot requires 64-bit Windows." /SD IDOK
+        SetErrorLevel 3
+        Abort
+    ${EndIf}
+    !insertmacro RequireAppClosed
+FunctionEnd
+
+Function un.onInit
+    !insertmacro RequireAppClosed
+FunctionEnd
 
 !define MUI_ABORTWARNING
 !define MUI_ICON   "..\QPARKShot\Assets\AppIcon.ico"
@@ -43,6 +73,7 @@ ShowUninstDetails show
 
 Section "QPARK Shot" SecMain
     SectionIn RO
+    !insertmacro RequireAppClosed
 
     ; Put all runtime files into a subfolder so the install root stays clean.
     SetOutPath "$INSTDIR\app"
@@ -78,16 +109,17 @@ Section "QPARK Shot" SecMain
 SectionEnd
 
 Section "Uninstall"
-    ; Stop running instance if any.
-    nsExec::Exec 'taskkill /F /IM "${APP_EXE}"'
+    !insertmacro RequireAppClosed
 
     ; Remove shortcuts.
     Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
     RMDir  "$SMPROGRAMS\${APP_NAME}"
     Delete "$DESKTOP\${APP_NAME}.lnk"
 
-    ; Remove install dir.
-    RMDir /r "$INSTDIR"
+    ; Delete only the shipped payload; preserve screenshots and other user files.
+    !include "..\build\Installer\uninstall-files.nsh"
+    Delete "$INSTDIR\Uninstall.exe"
+    RMDir "$INSTDIR"
 
     ; Clean registry.
     DeleteRegKey HKCU "${APP_REG_KEY}"

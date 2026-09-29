@@ -2,6 +2,8 @@
 
 The MSIX product is [QPARK Shot, 9NVF4TS6Z0C7](https://partner.microsoft.com/en-us/dashboard/products/9NVF4TS6Z0C7/overview). It is separate from the earlier EXE/MSI draft.
 
+On 2026-09-29 the publisher confirmed that certification and release succeeded. The public installation link is [QPARK Shot in Microsoft Store](https://apps.microsoft.com/detail/9NVF4TS6Z0C7). The draft statuses below are retained as the historical checkpoint from preparation on 2026-09-25, not the current release state.
+
 ## Package identity
 
 - Name: `16409D.A-PRoduction.QPARKShot`

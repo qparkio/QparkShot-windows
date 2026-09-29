@@ -8,7 +8,13 @@
 
 ## Windows 1.2
 
-The 1.2 source update brings the current macOS workspace and editing workflow to Windows. The published GitHub release is still the older 1.1.0 NSIS installer; 1.2 MSIX Preview builds are available as GitHub Actions artifacts. Store submission and certification are separate steps.
+QPARK Shot 1.2 brings the current macOS workspace and editing workflow to Windows.
+
+- [Download the Windows 1.2.0 EXE installer](https://github.com/qparkio/QparkShot-windows/releases/download/v1.2.0/QPARKShot-Setup-1.2.0.exe) — self-contained, per-user installation.
+- [Get QPARK Shot from Microsoft Store](https://apps.microsoft.com/detail/9NVF4TS6Z0C7) — signed installation, automatic updates and local Windows OCR.
+- [Release notes and SHA-256 checksums](https://github.com/qparkio/QparkShot-windows/releases/tag/v1.2.0).
+
+The standalone EXE is unsigned and Windows may show an unknown-publisher or SmartScreen warning. OCR requires the Store version; the standalone version supports capture, editing, exports, the local library, tags and filename search. Save current captures and quit from the tray before updating. The installer preserves settings and screenshots when upgrading from 1.1.
 
 ### Capture and edit
 
@@ -41,13 +47,13 @@ The 1.2 source update brings the current macOS workspace and editing workflow to
 
 - Windows 10 version 1809 (build 17763) or later, x64.
 - Packaged installation and installed Windows OCR language components for local text recognition.
-- .NET 8 SDK and Windows SDK to build from source on Windows. The delivered MSIX includes the .NET runtime.
+- .NET 8 SDK and Windows SDK to build from source on Windows. Both installers include the .NET runtime.
 
-Multi-monitor capture, mixed DPI, native sharing and the transition from an existing NSIS installation require interactive validation on a Windows client before public release. See [verification boundaries](docs/windows-1.2-port.md).
+CI covers regression checks, installed-MSIX launch/OCR, standalone installation, upgrade from the published 1.1 installer and uninstall data preservation. Multi-monitor capture, mixed DPI and native sharing still need interactive Windows client validation. See [verification boundaries](docs/windows-1.2-port.md).
 
 ## Build from a Mac
 
-Edit on macOS and push to a `codex/**` branch. The [Build Windows workflow](.github/workflows/build-windows.yml) compiles and tests on Windows Server 2022, installs an internal MSIX for launch/OCR checks, and uploads a clean Preview plus QA evidence. Download the `QPARKShot-Windows-1.2.0` artifact from that run.
+Edit on macOS and push to a `codex/**` branch. The [Build Windows workflow](.github/workflows/build-windows.yml) compiles and tests on Windows Server 2022, verifies the standalone installer and an internal MSIX, and uploads the EXE, checksums, a clean Preview and QA evidence. Download the `QPARKShot-Windows-1.2.0` artifact from that run. Only files in its `GitHub` directory are standalone release assets.
 
 The Preview uses a test identity and a self-signed certificate. It is intended for a dedicated Windows test account. The downloadable `.cer` contains only the public certificate. Follow the [MSIX build and installation guide](docs/msix.md).
 
@@ -61,11 +67,13 @@ Open `QPARKShot.sln` in Visual Studio 2022, or run:
 dotnet run --project QPARKShot.Tests/QPARKShot.Tests.csproj -c Release -- build/QA
 dotnet publish QPARKShot/QPARKShot.csproj -c Release -r win-x64 --self-contained true -o build/Release
 ./scripts/build-msix.ps1 -TestPackage
+# With NSIS installed:
+./scripts/build-installer.ps1
 ```
 
 Generated output is under `build/`, ignored by Git. The regression harness uses isolated settings and image folders. The CI artifact includes results and WPF-rendered interface screenshots.
 
-The legacy NSIS script remains available in `scripts/installer.nsi` for an ordinary installer. It is not built by the MSIX workflow, and an unpackaged executable cannot use the Windows OCR API.
+`scripts/build-installer.ps1` packages the published app with NSIS and writes the EXE, release notes and checksums to `build/GitHub`. `scripts/test-installer.ps1` runs only on disposable Windows GitHub runners and checks clean installation, upgrade from 1.1, running-app protection and uninstall data preservation. An unpackaged executable cannot use the Windows OCR API.
 
 ## Data and privacy
 
@@ -86,7 +94,9 @@ QPARKShot.Tests/           Windows STA regression and UI evidence harness
 packaging/                 MSIX manifest template and public logo assets
 scripts/build-msix.ps1      Validated Preview/Store packaging
 scripts/test-msix.ps1       Isolated runner installation and packaged OCR checks
-scripts/installer.nsi       Legacy NSIS option
+scripts/build-installer.ps1 Standalone EXE packaging and checksums
+scripts/installer.nsi       Per-user NSIS installer
+scripts/test-installer.ps1  Disposable-runner install/upgrade/uninstall checks
 .github/workflows/         Windows CI
 ```
 
