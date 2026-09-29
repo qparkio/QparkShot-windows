@@ -45,7 +45,11 @@ try {
     Check (!(Get-ChildItem "$install/app" -Recurse -Filter 'QPARKShot.Tests*')) 'Installer contains no regression executable'
     $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'QPARK Shot/QPARK Shot.lnk'
     $shell = New-Object -ComObject WScript.Shell
-    Check ($shell.CreateShortcut($shortcut).TargetPath -eq "$install\app\QPARKShot.exe") 'Start Menu shortcut targets installed application'
+    $target = $shell.CreateShortcut($shortcut).TargetPath
+    @{ shortcut = $shortcut; target = $target; expected = "$install\app\QPARKShot.exe" } | ConvertTo-Json | Set-Content "$qa/shortcut.json"
+    # The runner TEMP path can contain RUNNER~1 while the shell expands it to runneradmin.
+    $fileSystem = New-Object -ComObject Scripting.FileSystemObject
+    Check ((Test-Path $target) -and $fileSystem.GetFile($target).ShortPath -eq $fileSystem.GetFile("$install\app\QPARKShot.exe").ShortPath) 'Start Menu shortcut targets installed application'
     Start-App
     Run-Setup $installer '/S' 2
     Run-Setup "$install/Uninstall.exe" "/S _?=$install" 2
